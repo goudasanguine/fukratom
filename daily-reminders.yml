@@ -42,7 +42,7 @@ env:
   REMINDER_TZ: America/Los_Angeles
   MORNING_HOUR: "08" # 24h, zero-padded, in REMINDER_TZ
   EVENING_HOUR: "20" # 24h, zero-padded, in REMINDER_TZ
-  APP_URL: "https://YOUR-USERNAME.github.io/YOUR-REPO/" # update after Pages is live
+  APP_URL: "https://goudasanguine.github.io/fukratom/"
 
 jobs:
   send:

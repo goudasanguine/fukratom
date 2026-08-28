@@ -485,7 +485,7 @@ function registerServiceWorker() {
    Keys & IDs). This ID is public/safe to have in this committed file -- it's
    not a secret, unlike the REST API key used in the GitHub Action. */
 
-const ONESIGNAL_APP_ID = "YOUR_ONESIGNAL_APP_ID";
+const ONESIGNAL_APP_ID = "cc982374-7353-4a4f-89b2-65775b18a3a4";
 
 function oneSignalConfigured() {
   return !!ONESIGNAL_APP_ID && !ONESIGNAL_APP_ID.startsWith("YOUR_");
