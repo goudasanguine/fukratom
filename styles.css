@@ -36,6 +36,35 @@
   }
 }
 
+/* Manual "Appearance" override from Settings (data-theme on <html>), for
+   when someone wants light/dark independent of their device's setting.
+   Higher specificity than the bare :root above, so these win either way. */
+:root[data-theme="dark"] {
+  --ink: #eef4f2;
+  --ink-soft: #a9bdb8;
+  --bg: #0f1614;
+  --card-bg: #161f1d;
+  --border: #24302d;
+  --teal-100: #163430;
+  --amber-100: #3a2c14;
+  --tint-ink: #e3f4f1;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --ink: #1d2624;
+  --ink-soft: #57645f;
+  --bg: #f6f9f8;
+  --card-bg: #ffffff;
+  --border: #e2e8e6;
+  --teal-100: #e3f4f1;
+  --amber-100: #fbecd3;
+  --tint-ink: var(--teal-900);
+  --shadow: 0 1px 3px rgba(16, 40, 36, 0.06), 0 8px 24px rgba(16, 40, 36, 0.05);
+  color-scheme: light;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -112,7 +141,7 @@ main {
 .setup-card input, .setup-card textarea { width: 100%; margin-top: 6px; }
 .optional { font-weight: 400; color: var(--ink-soft); }
 
-input[type="text"], input[type="date"], textarea {
+input[type="text"], input[type="date"], input[type="number"], textarea, select {
   width: 100%;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
