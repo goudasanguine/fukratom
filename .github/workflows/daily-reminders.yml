@@ -70,6 +70,9 @@ jobs:
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
           ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
         run: |
+          echo "DEBUG: ONESIGNAL_APP_ID length: ${#ONESIGNAL_APP_ID}"
+          echo "DEBUG: ONESIGNAL_REST_API_KEY length: ${#ONESIGNAL_REST_API_KEY}"
+          echo "DEBUG: ONESIGNAL_REST_API_KEY first 8 chars: ${ONESIGNAL_REST_API_KEY:0:8}"
           BODY=$(jq -n \
             --arg app_id "$ONESIGNAL_APP_ID" \
             --arg title "Today's pledge" \
@@ -95,6 +98,9 @@ jobs:
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
           ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
         run: |
+          echo "DEBUG: ONESIGNAL_APP_ID length: ${#ONESIGNAL_APP_ID}"
+          echo "DEBUG: ONESIGNAL_REST_API_KEY length: ${#ONESIGNAL_REST_API_KEY}"
+          echo "DEBUG: ONESIGNAL_REST_API_KEY first 8 chars: ${ONESIGNAL_REST_API_KEY:0:8}"
           BODY=$(jq -n \
             --arg app_id "$ONESIGNAL_APP_ID" \
             --arg title "Check in" \
