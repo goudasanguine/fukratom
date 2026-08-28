@@ -42,7 +42,7 @@ env:
   REMINDER_TZ: America/Los_Angeles
   MORNING_HOUR: "08" # 24h, zero-padded, in REMINDER_TZ
   EVENING_HOUR: "20" # 24h, zero-padded, in REMINDER_TZ
-  APP_URL: "https://YOUR-USERNAME.github.io/YOUR-REPO/" # update after Pages is live
+  APP_URL: "https://goudasanguine.github.io/fukratom/"
 
 jobs:
   send:
@@ -76,10 +76,18 @@ jobs:
             --arg msg "I will not take kratom today." \
             --arg url "$APP_URL" \
             '{app_id: $app_id, target_channel: "push", included_segments: ["Subscribed Users"], headings: {en: $title}, contents: {en: $msg}, url: $url}')
-          curl -sf https://api.onesignal.com/notifications \
+          RESPONSE=$(curl -s -w '\n%{http_code}' https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
             -H "Authorization: Key ${ONESIGNAL_REST_API_KEY}" \
-            -d "$BODY"
+            -d "$BODY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "OneSignal responded with HTTP $HTTP_CODE:"
+          echo "$RESPONSE_BODY"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::OneSignal API call failed (HTTP $HTTP_CODE) -- see response above"
+            exit 1
+          fi
 
       - name: Send evening check-in
         if: steps.decide.outputs.which == 'evening'
@@ -93,7 +101,15 @@ jobs:
             --arg msg "How did today go? Open Fuck Kratom and log it." \
             --arg url "$APP_URL" \
             '{app_id: $app_id, target_channel: "push", included_segments: ["Subscribed Users"], headings: {en: $title}, contents: {en: $msg}, url: $url}')
-          curl -sf https://api.onesignal.com/notifications \
+          RESPONSE=$(curl -s -w '\n%{http_code}' https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
             -H "Authorization: Key ${ONESIGNAL_REST_API_KEY}" \
-            -d "$BODY"
+            -d "$BODY")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "OneSignal responded with HTTP $HTTP_CODE:"
+          echo "$RESPONSE_BODY"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "::error::OneSignal API call failed (HTTP $HTTP_CODE) -- see response above"
+            exit 1
+          fi
