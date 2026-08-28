@@ -419,6 +419,7 @@ function wireEvents() {
   document.getElementById("resetBtn").addEventListener("click", resetAllData);
 
   document.getElementById("enableNotifsBtn").addEventListener("click", requestNotifPermission);
+  document.getElementById("checkUpdateBtn").addEventListener("click", checkForUpdate);
 }
 
 /* ---------- backup / restore ---------- */
@@ -477,7 +478,62 @@ function registerServiceWorker() {
     // Relative path so this works whether the app is hosted at the domain root
     // or in a GitHub Pages project subpath.
     navigator.serviceWorker.register("sw.js").catch(() => {});
+
+    // sw.js calls self.skipWaiting() + self.clients.claim(), so a new version
+    // takes control the moment it's ready -- no separate "install" prompt.
+    // Only reload automatically when *this* takes control after the person
+    // taps "Check for updates" below; a silent background update (the browser
+    // does its own periodic checks) shouldn't yank the page out from under
+    // someone mid-note.
+    let hasReloadedForUpdate = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!userRequestedUpdate || hasReloadedForUpdate) return;
+      hasReloadedForUpdate = true;
+      window.location.reload();
+    });
   }
+}
+
+let userRequestedUpdate = false;
+
+function checkForUpdate() {
+  const statusEl = document.getElementById("updateStatus");
+  const btn = document.getElementById("checkUpdateBtn");
+  if (!statusEl || !btn) return;
+
+  if (!("serviceWorker" in navigator)) {
+    statusEl.textContent = "Not supported in this browser.";
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = "Checking…";
+
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if (!reg) {
+      statusEl.textContent = "Couldn't check -- try closing and reopening the app.";
+      btn.disabled = false;
+      return;
+    }
+    userRequestedUpdate = true;
+    reg
+      .update()
+      .then(() => {
+        // If an update was found, sw.js installs and activates it right away,
+        // which fires "controllerchange" above and reloads the page. If
+        // nothing happens in a few seconds, there was nothing new.
+        setTimeout(() => {
+          statusEl.textContent = "You're on the latest version.";
+          btn.disabled = false;
+          userRequestedUpdate = false;
+        }, 3000);
+      })
+      .catch(() => {
+        statusEl.textContent = "Couldn't check for updates -- check your connection.";
+        btn.disabled = false;
+        userRequestedUpdate = false;
+      });
+  });
 }
 
 /* ---------- push notifications (OneSignal) ----------
