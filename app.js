@@ -61,6 +61,7 @@ function defaultData() {
       quitDate: null,
       reason: "",
       dailyCost: 45,
+      theme: "system",
     },
     relapses: [],
     notes: {},
@@ -68,6 +69,7 @@ function defaultData() {
 }
 
 let data = loadData();
+applyTheme(); // do this immediately (before first paint) to avoid a flash of the wrong theme
 
 function loadData() {
   try {
@@ -89,6 +91,17 @@ function loadData() {
 function saveData() {
   data.relapses = Array.from(new Set(data.relapses)).sort();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/* ---------- theme (light / dark / match device) ---------- */
+
+function applyTheme() {
+  const theme = data.settings.theme || "system";
+  if (theme === "system") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
 }
 
 /* ---------- streak math ---------- */
@@ -320,6 +333,7 @@ function openSettingsModal() {
   document.getElementById("settingsQuitDate").max = todayStr();
   document.getElementById("settingsReason").value = data.settings.reason || "";
   document.getElementById("settingsDailyCost").value = data.settings.dailyCost;
+  document.getElementById("settingsTheme").value = data.settings.theme || "system";
   document.getElementById("settingsModal").classList.remove("hidden");
   updateNotifStatus();
 }
@@ -420,6 +434,14 @@ function wireEvents() {
 
   document.getElementById("enableNotifsBtn").addEventListener("click", requestNotifPermission);
   document.getElementById("checkUpdateBtn").addEventListener("click", checkForUpdate);
+
+  // Theme applies (and saves) the instant it's changed, rather than waiting
+  // for "Save settings" -- so switching it feels immediate.
+  document.getElementById("settingsTheme").addEventListener("change", (e) => {
+    data.settings.theme = e.target.value;
+    saveData();
+    applyTheme();
+  });
 }
 
 /* ---------- backup / restore ---------- */
