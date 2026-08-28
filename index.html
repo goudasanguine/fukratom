@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12736b">
+<title>Fuck Kratom</title>
+<meta name="description" content="A private day-by-day tracker for staying kratom-free.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">✓</span>
+    <div>
+      <h1 id="appName">Fuck Kratom</h1>
+      <p id="appSubtitle" class="subtitle">kratom-free tracker</p>
+    </div>
+  </div>
+  <button id="settingsBtn" class="icon-btn" aria-label="Settings" title="Settings">⚙️</button>
+</header>
+
+<main>
+
+  <!-- First-run setup -->
+  <section id="setupCard" class="card setup-card hidden">
+    <h2>Let's get started</h2>
+    <p>Pick the day your current streak began. You can change this any time.</p>
+    <label for="setupDate">Sobriety start date</label>
+    <input type="date" id="setupDate">
+    <label for="setupReason">Why this matters to you <span class="optional">(optional)</span></label>
+    <textarea id="setupReason" rows="2" placeholder="A short reminder for the days that get hard..."></textarea>
+    <button id="setupSaveBtn" class="btn btn-primary">Start tracking</button>
+  </section>
+
+  <div id="appBody" class="hidden">
+
+    <!-- Hero streak counter -->
+    <section class="card hero">
+      <div class="hero-count">
+        <div class="hero-number" id="heroDays">0</div>
+        <div class="hero-label" id="heroLabel">days clear</div>
+      </div>
+      <p class="hero-since" id="heroSince"></p>
+      <p class="hero-reason" id="heroReason"></p>
+      <div class="hero-actions">
+        <button id="logSlipBtn" class="btn btn-quiet">Log a slip</button>
+        <button id="addNoteBtn" class="btn btn-quiet">Add today's note</button>
+      </div>
+    </section>
+
+    <!-- Stats row -->
+    <section class="stats-row">
+      <div class="stat card">
+        <div class="stat-value" id="statLongest">0</div>
+        <div class="stat-label">longest streak</div>
+      </div>
+      <div class="stat card">
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">total days clear</div>
+      </div>
+      <div class="stat card">
+        <div class="stat-value" id="statSlips">0</div>
+        <div class="stat-label">slips logged</div>
+      </div>
+    </section>
+
+    <!-- Milestones -->
+    <section class="card">
+      <h2 class="section-title">Milestones</h2>
+      <div id="milestones" class="milestones"></div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="card">
+      <div class="cal-header">
+        <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+        <h2 id="calMonthLabel" class="section-title cal-month"></h2>
+        <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div id="calGrid" class="cal-grid"></div>
+      <div class="legend">
+        <span class="legend-item"><i class="dot dot-clear"></i>Clear day</span>
+        <span class="legend-item"><i class="dot dot-slip"></i>Slip</span>
+        <span class="legend-item"><i class="dot dot-note"></i>Has a note</span>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- Day detail modal -->
+<div id="dayModal" class="modal-overlay hidden">
+  <div class="modal card">
+    <button class="modal-close" id="dayModalClose" aria-label="Close">×</button>
+    <h2 id="dayModalDate">Date</h2>
+    <p id="dayModalStatus" class="day-status"></p>
+    <label for="dayModalNote">Note <span class="optional">(optional)</span></label>
+    <textarea id="dayModalNote" rows="4" placeholder="How was this day? What helped, or what was hard?"></textarea>
+    <div class="modal-actions">
+      <button id="dayModalToggleSlip" class="btn btn-quiet"></button>
+      <button id="dayModalSave" class="btn btn-primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Slip confirm modal -->
+<div id="slipModal" class="modal-overlay hidden">
+  <div class="modal card">
+    <button class="modal-close" id="slipModalClose" aria-label="Close">×</button>
+    <h2>Log a slip</h2>
+    <p class="gentle-copy">Thanks for being honest with yourself — that's part of staying on track. Pick the date it happened. A slip isn't a reset of your effort, just a new starting line.</p>
+    <label for="slipDate">Date</label>
+    <input type="date" id="slipDate">
+    <div class="modal-actions">
+      <button id="slipCancelBtn" class="btn btn-quiet">Cancel</button>
+      <button id="slipConfirmBtn" class="btn btn-primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="settingsModal" class="modal-overlay hidden">
+  <div class="modal card">
+    <button class="modal-close" id="settingsModalClose" aria-label="Close">×</button>
+    <h2>Settings</h2>
+
+    <label for="settingsAppName">App name</label>
+    <input type="text" id="settingsAppName" maxlength="40">
+
+    <label for="settingsSubtitle">Subtitle</label>
+    <input type="text" id="settingsSubtitle" maxlength="60">
+
+    <label for="settingsQuitDate">Sobriety start date</label>
+    <input type="date" id="settingsQuitDate">
+    <p class="hint">Changing this recalculates your streaks. Slips you've logged are kept.</p>
+
+    <label for="settingsReason">Your reason <span class="optional">(optional)</span></label>
+    <textarea id="settingsReason" rows="2"></textarea>
+
+    <button id="settingsSaveBtn" class="btn btn-primary">Save settings</button>
+
+    <hr>
+
+    <h3>Notifications</h3>
+    <p class="hint">A morning pledge and an evening check-in reminder, sent to this
+      phone even when the app is closed.</p>
+    <p id="notifStatus" class="hint">Checking status…</p>
+    <button id="enableNotifsBtn" class="btn btn-quiet">Enable notifications</button>
+
+    <hr>
+
+    <h3>Your data</h3>
+    <p class="hint">Everything is stored only on this device/browser. Back it up regularly, especially before switching phones.</p>
+    <div class="settings-data-actions">
+      <button id="exportBtn" class="btn btn-quiet">Export backup</button>
+      <label class="btn btn-quiet file-btn">
+        Import backup
+        <input type="file" id="importInput" accept="application/json" hidden>
+      </label>
+    </div>
+
+    <hr>
+    <button id="resetBtn" class="btn btn-danger">Erase all data</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

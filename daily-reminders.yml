@@ -1,0 +1,99 @@
+name: Daily reminders
+
+# Sends two push notifications a day to Shawn's phone via OneSignal, appearing
+# to come from Fuck Kratom itself (no separate app to install):
+#   - a morning pledge ("I will not take kratom today.")
+#   - an evening nudge to log how the day went in Fuck Kratom
+#
+# Setup (one-time):
+#   1. Create a free OneSignal account and a Web Push app (see README.md for the
+#      full walkthrough, including the app-side setup this pairs with).
+#   2. Add two repo secrets (Settings -> Secrets and variables -> Actions):
+#        ONESIGNAL_APP_ID          (also goes in app.js -- not secret, just an ID)
+#        ONESIGNAL_REST_API_KEY    (keep this one truly secret -- never commit it)
+#   3. Update APP_URL below once GitHub Pages is live, so tapping a
+#      notification opens the app.
+#   4. Optional: adjust MORNING_HOUR / EVENING_HOUR / REMINDER_TZ below.
+#   5. Test any time without waiting for the schedule: go to this repo's
+#      Actions tab -> "Daily reminders" -> "Run workflow".
+#
+# Note: GitHub disables scheduled workflows automatically after 60 days
+# with no repo activity. If reminders stop arriving, open the Actions tab,
+# re-enable the workflow, and it'll pick back up.
+
+on:
+  schedule:
+    # Runs once an hour, every hour. The job itself decides (below) whether
+    # it's actually the morning or evening target hour before sending
+    # anything -- this keeps the reminder on the correct wall-clock time
+    # year-round without needing to hand-adjust for daylight saving.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      which:
+        description: "Send this reminder right now (for testing)"
+        type: choice
+        options:
+          - morning
+          - evening
+        default: morning
+
+env:
+  REMINDER_TZ: America/Los_Angeles
+  MORNING_HOUR: "08" # 24h, zero-padded, in REMINDER_TZ
+  EVENING_HOUR: "20" # 24h, zero-padded, in REMINDER_TZ
+  APP_URL: "https://YOUR-USERNAME.github.io/YOUR-REPO/" # update after Pages is live
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide which reminder (if any) applies right now
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "which=${{ inputs.which }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          HOUR=$(TZ="$REMINDER_TZ" date +%H)
+          if [ "$HOUR" = "$MORNING_HOUR" ]; then
+            echo "which=morning" >> "$GITHUB_OUTPUT"
+          elif [ "$HOUR" = "$EVENING_HOUR" ]; then
+            echo "which=evening" >> "$GITHUB_OUTPUT"
+          else
+            echo "which=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send morning pledge
+        if: steps.decide.outputs.which == 'morning'
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
+        run: |
+          BODY=$(jq -n \
+            --arg app_id "$ONESIGNAL_APP_ID" \
+            --arg title "Today's pledge" \
+            --arg msg "I will not take kratom today." \
+            --arg url "$APP_URL" \
+            '{app_id: $app_id, target_channel: "push", included_segments: ["Subscribed Users"], headings: {en: $title}, contents: {en: $msg}, url: $url}')
+          curl -sf https://api.onesignal.com/notifications \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Key ${ONESIGNAL_REST_API_KEY}" \
+            -d "$BODY"
+
+      - name: Send evening check-in
+        if: steps.decide.outputs.which == 'evening'
+        env:
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
+        run: |
+          BODY=$(jq -n \
+            --arg app_id "$ONESIGNAL_APP_ID" \
+            --arg title "Check in" \
+            --arg msg "How did today go? Open Fuck Kratom and log it." \
+            --arg url "$APP_URL" \
+            '{app_id: $app_id, target_channel: "push", included_segments: ["Subscribed Users"], headings: {en: $title}, contents: {en: $msg}, url: $url}')
+          curl -sf https://api.onesignal.com/notifications \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Key ${ONESIGNAL_REST_API_KEY}" \
+            -d "$BODY"
