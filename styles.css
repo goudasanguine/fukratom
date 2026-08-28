@@ -13,6 +13,11 @@
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 1px 3px rgba(16, 40, 36, 0.06), 0 8px 24px rgba(16, 40, 36, 0.05);
+  /* Text color for anything sitting on a --teal-100-tinted background (quiet
+     buttons, "clear day" calendar cells). Equals --teal-900 in light mode;
+     redefined below for dark mode so that text stays readable instead of
+     landing dark-on-dark. */
+  --tint-ink: var(--teal-900);
   color-scheme: light;
 }
 
@@ -25,6 +30,7 @@
     --border: #24302d;
     --teal-100: #163430;
     --amber-100: #3a2c14;
+    --tint-ink: #e3f4f1;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
     color-scheme: dark;
   }
@@ -128,7 +134,7 @@ textarea { resize: vertical; }
 }
 .btn-primary { background: var(--teal-700); color: white; margin-top: 16px; }
 .btn-primary:hover { background: var(--teal-900); }
-.btn-quiet { background: var(--teal-100); color: var(--teal-900); }
+.btn-quiet { background: var(--teal-100); color: var(--tint-ink); }
 .btn-quiet:hover { filter: brightness(0.96); }
 .btn-danger { background: transparent; color: #b3441f; border: 1px solid #b3441f55; margin-top: 8px; }
 .btn-danger:hover { background: #b3441f14; }
@@ -206,7 +212,7 @@ textarea { resize: vertical; }
 .cal-day.empty { visibility: hidden; cursor: default; }
 .cal-day.future { color: var(--ink-soft); opacity: 0.5; cursor: default; }
 .cal-day.before-start { color: var(--ink-soft); opacity: 0.35; cursor: default; }
-.cal-day.clear { background: var(--teal-100); color: var(--teal-900); font-weight: 600; }
+.cal-day.clear { background: var(--teal-100); color: var(--tint-ink); font-weight: 600; }
 .cal-day.slip { background: var(--amber-100); color: var(--amber-500); font-weight: 600; }
 .cal-day.today { border-color: var(--teal-700); }
 .cal-day .note-dot {
