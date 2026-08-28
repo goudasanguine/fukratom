@@ -54,6 +54,13 @@
       </div>
     </section>
 
+    <!-- Money saved -->
+    <section class="card money-card">
+      <div class="money-value" id="moneySaved">$0</div>
+      <div class="money-label">money saved</div>
+      <p class="hint" id="moneyNote"></p>
+    </section>
+
     <!-- Stats row -->
     <section class="stats-row">
       <div class="stat card">
@@ -145,6 +152,10 @@
 
     <label for="settingsReason">Your reason <span class="optional">(optional)</span></label>
     <textarea id="settingsReason" rows="2"></textarea>
+
+    <label for="settingsDailyCost">Estimated $ saved per day</label>
+    <input type="number" id="settingsDailyCost" min="0" step="1">
+    <p class="hint">Used for the "money saved" total. Adjust any time.</p>
 
     <button id="settingsSaveBtn" class="btn btn-primary">Save settings</button>
 

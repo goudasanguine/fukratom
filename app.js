@@ -60,6 +60,7 @@ function defaultData() {
       subtitle: "kratom-free tracker",
       quitDate: null,
       reason: "",
+      dailyCost: 45,
     },
     relapses: [],
     notes: {},
@@ -136,6 +137,11 @@ function totalClearDays() {
   return Math.max(0, span - relapsesInRange);
 }
 
+function moneySaved() {
+  const dailyCost = Number(data.settings.dailyCost) || 0;
+  return Math.round(totalClearDays() * dailyCost);
+}
+
 /* ---------- rendering ---------- */
 
 let calYear, calMonth; // 0-indexed month, currently displayed
@@ -159,6 +165,7 @@ function renderAll() {
 
   renderHeader();
   renderHero();
+  renderMoney();
   renderStats();
   renderMilestones();
   renderCalendar();
@@ -179,6 +186,13 @@ function renderHero() {
       ? `Since ${formatPretty(start)}`
       : "Your streak starts today";
   document.getElementById("heroReason").textContent = data.settings.reason || "";
+}
+
+function renderMoney() {
+  const amount = moneySaved();
+  document.getElementById("moneySaved").textContent = `$${amount.toLocaleString()}`;
+  const rate = Number(data.settings.dailyCost) || 0;
+  document.getElementById("moneyNote").textContent = `Based on $${rate}/day not spent on kratom`;
 }
 
 function renderStats() {
@@ -305,6 +319,7 @@ function openSettingsModal() {
   document.getElementById("settingsQuitDate").value = data.settings.quitDate || "";
   document.getElementById("settingsQuitDate").max = todayStr();
   document.getElementById("settingsReason").value = data.settings.reason || "";
+  document.getElementById("settingsDailyCost").value = data.settings.dailyCost;
   document.getElementById("settingsModal").classList.remove("hidden");
   updateNotifStatus();
 }
@@ -388,6 +403,8 @@ function wireEvents() {
     data.settings.appName = document.getElementById("settingsAppName").value.trim() || "Fuck Kratom";
     data.settings.subtitle = document.getElementById("settingsSubtitle").value.trim();
     data.settings.reason = document.getElementById("settingsReason").value.trim();
+    const costInput = parseFloat(document.getElementById("settingsDailyCost").value);
+    data.settings.dailyCost = Number.isFinite(costInput) && costInput >= 0 ? costInput : 45;
     if (newQuitDate) {
       data.settings.quitDate = newQuitDate;
       data.relapses = data.relapses.filter((r) => r >= newQuitDate);

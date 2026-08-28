@@ -143,6 +143,11 @@ textarea { resize: vertical; }
 .hero-reason { font-style: italic; color: var(--ink-soft); font-size: 14px; margin: 10px 0 0; }
 .hero-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
 
+.money-card { text-align: center; padding: 16px 20px; }
+.money-value { font-size: 32px; font-weight: 800; color: var(--teal-700); line-height: 1.1; }
+.money-label { font-size: 13px; color: var(--ink-soft); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+.money-card .hint { margin-top: 8px; }
+
 .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .stat { text-align: center; padding: 14px 8px; }
 .stat-value { font-size: 22px; font-weight: 700; color: var(--teal-700); }

@@ -6,6 +6,8 @@ app so it can be hosted for free on GitHub Pages and installed on a phone like a
 ## What it does
 
 - Big "days clear" counter based on a sobriety start date, recalculated automatically
+- A "money saved" total, based on an estimated daily cost (defaults to $45/day —
+  editable in Settings) times clear days
 - A monthly calendar — clear days in green, logged slips in amber, a dot on any day with a note
 - Tap any past day to add a private note or mark/unmark it as a slip (for backdating)
 - Longest streak, total clear days, and slip count at a glance
