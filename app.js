@@ -70,9 +70,23 @@ function defaultData() {
     // the passive/forgiving auto-counted streak. Purely a bonus ritual: XP
     // and fanfare, never required and never clawed back.
     confirmedDays: [],
+    // Dates Shawn has tapped the morning/afternoon pledge button on (before
+    // 8pm, before that day's "Mark today clean" even unlocks). One-time
+    // per day, no catch-up if skipped -- unlike confirmedDays below.
+    pledgedDays: [],
     // Dates that have already earned the journal-entry XP bonus, so editing
     // a note twice in one day doesn't double-pay it.
     journalXpDates: [],
+    // Dates that were clean but never actively confirmed via "Mark today
+    // clean" -- these still count toward the streak either way (it's always
+    // been fully automatic), but once a day like this is fully in the past
+    // it quietly gets half of confirmedDays' XP instead of none, so a
+    // forgotten evening doesn't cost the pet all its XP for that day. See
+    // processPastCleanDays(). Tracked separately so a day is never paid out
+    // twice (once here, once if Shawn later confirms -- confirming only
+    // applies to *today*, so that overlap can't actually happen, but this
+    // keeps the two payout paths cleanly distinguishable either way).
+    autoXpDates: [],
     // Pet customization: a nickname Shawn can optionally give it, the date it
     // "hatched" (first time this data was ever created, shown in its detail
     // view), plus which unlocked accessory/background are currently equipped
@@ -99,7 +113,9 @@ function loadData() {
       notes: parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
       xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
       confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
+      pledgedDays: Array.isArray(parsed.pledgedDays) ? parsed.pledgedDays.slice().sort() : [],
       journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
+      autoXpDates: Array.isArray(parsed.autoXpDates) ? parsed.autoXpDates.slice().sort() : [],
       petName: typeof parsed.petName === "string" ? parsed.petName : "",
       petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
       equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
@@ -114,7 +130,9 @@ function loadData() {
 function saveData() {
   data.relapses = Array.from(new Set(data.relapses)).sort();
   data.confirmedDays = Array.from(new Set(data.confirmedDays)).sort();
+  data.pledgedDays = Array.from(new Set(data.pledgedDays)).sort();
   data.journalXpDates = Array.from(new Set(data.journalXpDates)).sort();
+  data.autoXpDates = Array.from(new Set(data.autoXpDates)).sort();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -187,14 +205,21 @@ function moneySaved() {
 /* ---------- XP, leveling, and the pet companion ----------
    Tunable knobs -- easy to rebalance later without touching the logic below. */
 
-const XP_CLEAN_DAY = 15; // tapping "Mark today clean" after 8pm
-const XP_JOURNAL_ENTRY = 5; // writing a journal note, once per calendar day
+const XP_PLEDGE = 35; // tapping the one-time morning/afternoon pledge, before 8pm
+const XP_CLEAN_DAY = 50; // tapping "Mark today clean" after 8pm -- exactly enough to hit level 2 solo, day one
+const XP_CLEAN_DAY_AUTO = XP_CLEAN_DAY / 2; // half credit, quietly backfilled for a clean day Shawn never actively confirmed -- see processPastCleanDays()
+const XP_JOURNAL_ENTRY = 15; // writing a journal note, once per calendar day
 
 // Cumulative XP required to REACH a given level (level 1 starts at 0 XP).
-// Grows quadratically so early levels come fast and later ones take longer --
-// level 2 at 50xp, level 3 at 150, level 4 at 300, level 5 at 500, etc.
+// Not a plain quadratic -- level 2 is pinned to exactly XP_CLEAN_DAY (50) so
+// one clean-day tap on day one is enough to level up immediately, while the
+// curve accelerates faster than a pure quadratic further out so level 15
+// lands around 6 months out for someone doing both daily rituals (pledge +
+// mark clean, ~85 XP/day): 2*(level-1)^2*(level+23) -- e.g. level 5 at 896,
+// level 10 at 5,346, level 15 at 14,896.
 function xpForLevel(level) {
-  return 25 * level * (level - 1);
+  const n = level - 1;
+  return 2 * n * n * (level + 23);
 }
 
 function levelForXp(xp) {
@@ -250,7 +275,7 @@ function petStageForLevel(level) {
 // level through 15, so there's always something new right around the corner.
 const ACCESSORIES = [
   { key: "none", name: "None", minLevel: 1 },
-  { key: "bandana", name: "Bandana", minLevel: 3 },
+  { key: "pacifier", name: "Pacifier", minLevel: 3 },
   { key: "shades", name: "Shades", minLevel: 4 },
   { key: "clownnose", name: "Clown Nose", minLevel: 5 },
   { key: "bowtie", name: "Bow Tie", minLevel: 6 },
@@ -285,8 +310,39 @@ function todayConfirmed() {
   return data.confirmedDays.includes(todayStr());
 }
 
+function todayPledged() {
+  return data.pledgedDays.includes(todayStr());
+}
+
 function todayIsSlip() {
   return data.relapses.includes(todayStr());
+}
+
+// Quietly backfills half-XP (XP_CLEAN_DAY_AUTO) for any past, fully-over day
+// that was clean but never got an active "Mark today clean" tap -- the
+// streak itself never needed that tap (always automatic/forgiving), and now
+// XP doesn't either. Only looks at days strictly before today, so it can
+// never pay out for a day that's still in progress; today's own payout, if
+// any, only ever happens through handleMarkCleanDay(). Idempotent (checks
+// autoXpDates/confirmedDays first) and cheap, so it's safe to just run on
+// every load rather than trying to track a "last processed" cursor.
+function processPastCleanDays() {
+  if (!data.settings.quitDate) return;
+  const yesterday = addDays(todayStr(), -1);
+  if (yesterday < data.settings.quitDate) return;
+  let cursor = data.settings.quitDate;
+  let changed = false;
+  while (cursor <= yesterday) {
+    const isSlip = data.relapses.includes(cursor);
+    const alreadyPaid = data.confirmedDays.includes(cursor) || data.autoXpDates.includes(cursor);
+    if (!isSlip && !alreadyPaid) {
+      awardXp(XP_CLEAN_DAY_AUTO);
+      data.autoXpDates.push(cursor);
+      changed = true;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  if (changed) saveData();
 }
 
 /* ---------- rendering ---------- */
@@ -298,6 +354,7 @@ function init() {
   calYear = t.getFullYear();
   calMonth = t.getMonth();
 
+  processPastCleanDays();
   wireEvents();
   registerServiceWorker();
   initOneSignal();
@@ -555,8 +612,8 @@ function backgroundSvg(key) {
 // goggles, etc. in particular need to cover the plain eye circles beneath
 // them). Deliberately flat colors -- see the no-gradients note above.
 function accessorySvg(key) {
-  if (key === "bandana") {
-    return `<path d="M36 86 Q60 100 84 86 L78 98 Q60 106 42 98 Z" fill="var(--amber-500)"/><circle cx="60" cy="94" r="2.4" fill="var(--amber-100)"/>`;
+  if (key === "pacifier") {
+    return `<circle cx="60" cy="77" r="7" fill="var(--amber-100)" stroke="var(--amber-500)" stroke-width="1.8"/><line x1="60" y1="83.5" x2="60" y2="86" stroke="var(--amber-500)" stroke-width="2"/><circle cx="60" cy="90" r="4.5" fill="none" stroke="var(--amber-500)" stroke-width="2.2"/>`;
   }
   if (key === "shades") {
     return `<rect x="42" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><rect x="62" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="2"/>`;
@@ -568,10 +625,10 @@ function accessorySvg(key) {
     return `<path d="M52 84 L60 88 L52 92 Z" fill="var(--amber-500)"/><path d="M68 84 L60 88 L68 92 Z" fill="var(--amber-500)"/><circle cx="60" cy="88" r="2" fill="var(--amber-100)"/>`;
   }
   if (key === "eyepatch") {
-    return `<path d="M40 58 L58 55 L58 72 L41 70 Z" fill="var(--ink)"/><line x1="41" y1="60" x2="20" y2="50" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><line x1="41" y1="66" x2="20" y2="74" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`;
+    return `<path d="M40 58 L58 55 L58 72 L41 70 Z" fill="var(--ink)"/><line x1="41" y1="60" x2="31" y2="55" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><line x1="41" y1="66" x2="27" y2="76" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`;
   }
   if (key === "skimask") {
-    return `<path d="M26 44 Q60 24 94 44 L94 84 Q60 100 26 84 Z" fill="var(--ink)"/><circle cx="49" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><circle cx="71" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><path d="M52 78 Q60 84 68 78" stroke="var(--card-bg)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"/>`;
+    return `<ellipse cx="60" cy="68" rx="35" ry="32" fill="var(--ink)"/><circle cx="49" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><circle cx="71" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><path d="M52 78 Q60 84 68 78" stroke="var(--card-bg)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"/>`;
   }
   if (key === "crown") {
     return `<path d="M44 40 L48 30 L54 38 L60 28 L66 38 L72 30 L76 40 Z" fill="var(--amber-500)"/><circle cx="48" cy="30" r="1.8" fill="var(--teal-700)"/><circle cx="60" cy="28" r="1.8" fill="var(--teal-700)"/><circle cx="72" cy="30" r="1.8" fill="var(--teal-700)"/>`;
@@ -583,7 +640,7 @@ function accessorySvg(key) {
     return `<circle cx="49" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="71" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><line x1="56" y1="64" x2="64" y2="64" stroke="var(--ink)" stroke-width="1.6"/>`;
   }
   if (key === "catglasses") {
-    return `<path d="M41 61 Q49 55 59 63 Q49 70 41 68 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M79 61 Q71 55 61 63 Q71 70 79 68 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><line x1="59" y1="63" x2="61" y2="63" stroke="var(--ink)" stroke-width="1.8"/>`;
+    return `<path d="M37 60 Q49 52 60 63 Q49 73 37 67 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M83 60 Q71 52 60 63 Q71 73 83 67 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="1.8"/>`;
   }
   if (key === "monocle") {
     return `<circle cx="71" cy="64" r="7" fill="none" stroke="var(--amber-500)" stroke-width="1.8"/><path d="M77.5 70 Q83 78 78 87" stroke="var(--amber-500)" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
@@ -592,7 +649,7 @@ function accessorySvg(key) {
     return `<path d="M45 74 Q52 69 60 74 Q68 69 75 74 Q68 79 60 75.5 Q52 79 45 74 Z" fill="var(--ink)"/>`;
   }
   if (key === "tophat") {
-    return `<rect x="46" y="12" width="28" height="20" rx="2" fill="var(--ink)"/><rect x="39" y="30" width="42" height="6" rx="2" fill="var(--ink)"/><rect x="46" y="25" width="28" height="4" fill="var(--amber-500)"/>`;
+    return `<rect x="46" y="20" width="28" height="20" rx="2" fill="var(--ink)"/><rect x="39" y="38" width="42" height="6" rx="2" fill="var(--ink)"/><rect x="46" y="33" width="28" height="4" fill="var(--amber-500)"/>`;
   }
   return ""; // none
 }
@@ -712,31 +769,63 @@ function savePetName() {
   saveData();
 }
 
+// Two separate daily rituals, split by the same 8pm boundary that used to
+// just disable a single button: before 8pm it's the morning/afternoon
+// pledge (one-time, no catch-up if skipped); after 8pm it's the evening
+// "Mark today clean" confirmation (also one-time, but if it's skipped the
+// day still quietly earns half credit later via processPastCleanDays() once
+// it's fully in the past). Both are optional bonus XP on top of the streak,
+// which keeps tracking itself automatically either way.
 function renderCleanDayButton() {
-  const btn = document.getElementById("markCleanBtn");
-  const badge = document.getElementById("todayConfirmedBadge");
-  if (!btn || !badge) return;
+  const pledgeBtn = document.getElementById("pledgeBtn");
+  const pledgedBadge = document.getElementById("todayPledgedBadge");
+  const cleanBtn = document.getElementById("markCleanBtn");
+  const confirmedBadge = document.getElementById("todayConfirmedBadge");
+  if (!pledgeBtn || !pledgedBadge || !cleanBtn || !confirmedBadge) return;
 
   const hasStarted = !!data.settings.quitDate;
-  const unlocked = isEveningUnlocked();
-  const confirmed = todayConfirmed();
   const isSlip = todayIsSlip();
 
   if (!hasStarted || isSlip) {
-    btn.classList.add("hidden");
-    badge.classList.add("hidden");
+    pledgeBtn.classList.add("hidden");
+    pledgedBadge.classList.add("hidden");
+    cleanBtn.classList.add("hidden");
+    confirmedBadge.classList.add("hidden");
     return;
   }
 
-  if (confirmed) {
-    btn.classList.add("hidden");
-    badge.classList.remove("hidden");
+  if (!isEveningUnlocked()) {
+    cleanBtn.classList.add("hidden");
+    confirmedBadge.classList.add("hidden");
+    if (todayPledged()) {
+      pledgeBtn.classList.add("hidden");
+      pledgedBadge.classList.remove("hidden");
+    } else {
+      pledgedBadge.classList.add("hidden");
+      pledgeBtn.classList.remove("hidden");
+    }
   } else {
-    badge.classList.add("hidden");
-    btn.classList.remove("hidden");
-    btn.disabled = !unlocked;
-    btn.textContent = unlocked ? "Mark today clean 🌟" : "Mark today clean (unlocks at 8pm)";
+    pledgeBtn.classList.add("hidden");
+    pledgedBadge.classList.add("hidden");
+    if (todayConfirmed()) {
+      cleanBtn.classList.add("hidden");
+      confirmedBadge.classList.remove("hidden");
+    } else {
+      confirmedBadge.classList.add("hidden");
+      cleanBtn.classList.remove("hidden");
+    }
   }
+}
+
+function handlePledge() {
+  if (isEveningUnlocked() || todayPledged() || todayIsSlip()) return;
+  const today = todayStr();
+  data.pledgedDays.push(today);
+  const result = awardXp(XP_PLEDGE);
+  saveData();
+  renderCleanDayButton();
+  renderPet();
+  openFanfareModal(result);
 }
 
 function handleMarkCleanDay() {
@@ -824,6 +913,7 @@ function wireEvents() {
 
   document.getElementById("logSlipBtn").addEventListener("click", () => openSlipModal(todayStr()));
   document.getElementById("addNoteBtn").addEventListener("click", () => openDayModal(todayStr()));
+  document.getElementById("pledgeBtn").addEventListener("click", handlePledge);
   document.getElementById("markCleanBtn").addEventListener("click", handleMarkCleanDay);
 
   // Fanfare modal
@@ -978,7 +1068,9 @@ function importBackup(e) {
         notes: parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
         xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
         confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
+        pledgedDays: Array.isArray(parsed.pledgedDays) ? parsed.pledgedDays.slice().sort() : [],
         journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
+        autoXpDates: Array.isArray(parsed.autoXpDates) ? parsed.autoXpDates.slice().sort() : [],
         petName: typeof parsed.petName === "string" ? parsed.petName : "",
         petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
         equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
