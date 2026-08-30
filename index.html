@@ -56,21 +56,6 @@
       <p id="todayConfirmedBadge" class="today-confirmed-badge hidden">✓ Today confirmed clean</p>
     </section>
 
-    <!-- Pet companion -->
-    <section class="card pet-card">
-      <div id="petArt" class="pet-art"></div>
-      <div class="pet-info">
-        <div class="pet-name-row">
-          <span id="petStageName" class="pet-stage-name">Egg</span>
-          <span id="petLevel" class="pet-level">Level 1</span>
-        </div>
-        <div class="xp-bar">
-          <div id="petXpBarFill" class="xp-bar-fill" style="width: 0%"></div>
-        </div>
-        <p id="petXpLabel" class="hint">0 / 50 XP to next level</p>
-      </div>
-    </section>
-
     <!-- Money saved -->
     <section class="card money-card">
       <div class="money-value" id="moneySaved">$0</div>
@@ -116,6 +101,22 @@
         <span class="legend-item"><i class="dot dot-slip"></i>Slip</span>
         <span class="legend-item"><i class="dot dot-note"></i>Has a note</span>
       </div>
+    </section>
+
+    <!-- Pet companion -->
+    <section class="card pet-card" id="petCard" role="button" tabindex="0" aria-label="Open creature details">
+      <div id="petArt" class="pet-art"></div>
+      <div class="pet-info">
+        <div class="pet-name-row">
+          <span id="petStageName" class="pet-stage-name">Egg</span>
+          <span id="petLevel" class="pet-level">Level 1</span>
+        </div>
+        <div class="xp-bar">
+          <div id="petXpBarFill" class="xp-bar-fill" style="width: 0%"></div>
+        </div>
+        <p id="petXpLabel" class="hint">0 / 50 XP to next level</p>
+      </div>
+      <span class="pet-card-chevron" aria-hidden="true">›</span>
     </section>
 
   </div>
@@ -164,6 +165,29 @@
       <button id="fanfareNotNowBtn" class="btn btn-quiet">Not now</button>
       <button id="fanfareJournalBtn" class="btn btn-primary">Add a journal entry</button>
     </div>
+  </div>
+</div>
+
+<!-- Pet detail modal -->
+<div id="petModal" class="modal-overlay hidden">
+  <div class="modal card pet-modal">
+    <button class="modal-close" id="petModalClose" aria-label="Close">×</button>
+    <div id="petModalArt" class="pet-modal-art"></div>
+    <div class="pet-modal-name-row">
+      <input type="text" id="petNameInput" maxlength="24" placeholder="Give it a name">
+    </div>
+    <p id="petModalStageLevel" class="pet-modal-stage-level">Egg · Level 1</p>
+    <div class="xp-bar">
+      <div id="petModalXpBarFill" class="xp-bar-fill" style="width: 0%"></div>
+    </div>
+    <p id="petModalXpLabel" class="hint">0 / 50 XP to next level</p>
+    <p id="petModalBirthdate" class="hint pet-modal-birthdate"></p>
+
+    <h3 class="pet-modal-section-title">Accessories</h3>
+    <div id="petAccessoryGrid" class="pet-unlock-grid"></div>
+
+    <h3 class="pet-modal-section-title">Backgrounds</h3>
+    <div id="petBackgroundGrid" class="pet-unlock-grid"></div>
   </div>
 </div>
 
