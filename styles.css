@@ -539,3 +539,13 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   font-weight: 700;
   font-size: 13px;
 }
+
+/* ---------- Unlock announcement modal ---------- */
+
+.unlock-preview {
+  width: 110px;
+  height: 110px;
+  margin: 4px auto 8px;
+  animation: pet-bob 3.4s ease-in-out infinite;
+}
+.unlock-preview .pet-svg { width: 100%; height: 100%; }
