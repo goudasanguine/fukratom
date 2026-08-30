@@ -427,23 +427,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   overflow: hidden;
 }
 
-/* Backdrop -- cropped to cover, but only within a bounded 4:5 box (not the
-   full, much-taller phone screen) so the crop stays mild instead of zooming
-   the square 120x120 art in ~6x to cover an extreme portrait aspect ratio,
-   which was cutting off most of the scenery's detail (flagged 2026-08-31,
-   per Eric: "the backgrounds are a bit too zoomed in"). Anchored to the top
-   and faded out at the bottom edge (mask-image) into the stage's own flat
-   background color, so the crop reads as a deliberate framed/vignetted photo
-   rather than an abrupt cutoff -- the area behind the bottom info panel was
-   never meant to show background detail anyway. */
+/* Full-bleed backdrop, cropped to cover the whole stage. Went through two
+   earlier approaches before this one (2026-08-31, per Eric): first, the
+   square 120x120 art forced to cover a full phone screen needed ~6x zoom
+   ("too zoomed in, detail cut off"); then, bounding that crop to a 4:5 box
+   and fading its bottom edge kept the zoom mild but left the box short of
+   the actual screen height ("black space on the bottom quarter"). The real
+   fix -- per Eric's own suggestion -- is here: backgroundSvgTall() in
+   app.js draws each background against a 120x240 canvas that's already
+   close to a real phone's aspect ratio, so covering the full, actual
+   screen back needs only a mild crop. No bounding box or fade needed
+   anymore now that the art itself reaches every edge. */
 .pet-stage-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  inset: 0;
 }
 .pet-stage-bg svg {
   width: 100%;
