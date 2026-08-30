@@ -690,8 +690,11 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
   const bg = backgroundSvg(backgroundKey || "none");
   const acc = accessorySvg(accessoryKey || "none");
   const body = `<ellipse cx="60" cy="70" rx="34" ry="30" fill="var(--teal-500)"/>`;
-  const eyes = `<circle cx="49" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="71" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="49" cy="64" r="2.2" fill="var(--ink)"/><circle cx="71" cy="64" r="2.2" fill="var(--ink)"/>`;
-  const smile = `<path d="M52 76 Q60 82 68 76" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+  // Eyes and mouth use the fixed --pet-ink/--pet-light tokens (not
+  // --ink/--card-bg) so the face reads the same in light and dark mode --
+  // fixed 2026-08-30 after the mouth was going near-white in dark mode.
+  const eyes = `<circle cx="49" cy="64" r="4.5" fill="var(--pet-light)"/><circle cx="71" cy="64" r="4.5" fill="var(--pet-light)"/><circle cx="49" cy="64" r="2.2" fill="var(--pet-ink)"/><circle cx="71" cy="64" r="2.2" fill="var(--pet-ink)"/>`;
+  const smile = `<path d="M52 76 Q60 82 68 76" stroke="var(--pet-ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
   // Face tattoos matching Shawn's own -- two lines above the left eye, a
   // triangle/circle/triangle column above the right eye, and a downward
   // mark under the left eye. Shows on every stage once there's a face to
@@ -773,29 +776,40 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
 // shapes (no gradients) since several copies of this SVG can be on screen
 // at once (home card + every option tile in the unlock grid) and duplicate
 // gradient ids across inline SVGs can misbehave.
+//
+// Colors here are deliberately hardcoded hex, not --teal-100/--amber-100/
+// --card-bg/--border theme vars -- fixed 2026-08-30 after Eric pointed out
+// backgrounds were recoloring with dark mode (a sunrise sky shouldn't turn
+// into a night sky just because Shawn's phone is in dark mode). Baking these
+// in also leaves room for a future background that's deliberately a day or
+// night scene on purpose -- that'd be a real design choice per item, not an
+// accident of the site theme. var(--amber-500)/var(--teal-500)/
+// var(--teal-700)/var(--teal-900) are left as-is on purpose: those three
+// were already fixed across both themes (never redefined in styles.css), so
+// there's nothing to bake there.
 function backgroundSvg(key) {
   if (key === "sunrise") {
-    return `<circle cx="60" cy="58" r="50" fill="var(--amber-100)" opacity="0.7"/><path d="M4 96 Q60 76 116 96 L116 120 L4 120 Z" fill="var(--teal-100)" opacity="0.8"/>`;
+    return `<circle cx="60" cy="58" r="50" fill="#fbecd3" opacity="0.7"/><path d="M4 96 Q60 76 116 96 L116 120 L4 120 Z" fill="#e3f4f1" opacity="0.8"/>`;
   }
   if (key === "meadow") {
-    return `<path d="M0 96 Q30 84 60 96 T120 96 L120 120 L0 120 Z" fill="var(--teal-100)"/><circle cx="20" cy="100" r="3" fill="var(--amber-500)"/><circle cx="100" cy="102" r="3" fill="var(--amber-500)"/><circle cx="36" cy="107" r="2.2" fill="var(--teal-700)"/><circle cx="88" cy="108" r="2.2" fill="var(--teal-700)"/>`;
+    return `<path d="M0 96 Q30 84 60 96 T120 96 L120 120 L0 120 Z" fill="#e3f4f1"/><circle cx="20" cy="100" r="3" fill="var(--amber-500)"/><circle cx="100" cy="102" r="3" fill="var(--amber-500)"/><circle cx="36" cy="107" r="2.2" fill="var(--teal-700)"/><circle cx="88" cy="108" r="2.2" fill="var(--teal-700)"/>`;
   }
   if (key === "stars") {
     return `<rect x="0" y="0" width="120" height="120" fill="var(--teal-900)" opacity="0.16"/><circle cx="18" cy="22" r="1.7" fill="var(--amber-500)"/><circle cx="100" cy="18" r="1.4" fill="var(--amber-500)"/><circle cx="30" cy="102" r="1.4" fill="var(--amber-500)"/><circle cx="106" cy="96" r="1.7" fill="var(--amber-500)"/><circle cx="12" cy="70" r="1.3" fill="var(--amber-500)"/>`;
   }
   if (key === "aurora") {
-    return `<circle cx="60" cy="60" r="54" fill="var(--teal-100)" opacity="0.5"/><path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/><path d="M6 60 Q60 32 114 60" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>`;
+    return `<circle cx="60" cy="60" r="54" fill="#e3f4f1" opacity="0.5"/><path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/><path d="M6 60 Q60 32 114 60" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>`;
   }
   // Cozy neo-Tokyo zen garden: pale sky, a raked-sand ground plane, a torii
   // silhouette off to one side, and a cherry tree shedding petals. Sakura
   // pink is hardcoded (not a theme var) on purpose, same reasoning as
   // clownnose's red -- blossoms shouldn't shift color with dark mode.
   if (key === "sakuragarden") {
-    return `<rect x="0" y="0" width="120" height="120" fill="var(--teal-100)" opacity="0.35"/>
-      <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="var(--card-bg)" opacity="0.55"/>
-      <path d="M8 98 Q60 92 112 98" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 105 Q60 99 112 105" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 112 Q60 106 112 112" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
+    return `<rect x="0" y="0" width="120" height="120" fill="#e3f4f1" opacity="0.35"/>
+      <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="#ffffff" opacity="0.55"/>
+      <path d="M8 98 Q60 92 112 98" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 105 Q60 99 112 105" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 112 Q60 106 112 112" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
       <g opacity="0.85">
         <rect x="12" y="30" width="3" height="34" fill="#a0453c"/>
         <rect x="27" y="30" width="3" height="34" fill="#a0453c"/>
@@ -816,9 +830,9 @@ function backgroundSvg(key) {
   // Simple sunny knoll: sky wash, a sun, two rolling green rises, a winding
   // path through them, and a small round tree off to the side.
   if (key === "greenknoll") {
-    return `<rect x="0" y="0" width="120" height="120" fill="var(--amber-100)" opacity="0.3"/>
+    return `<rect x="0" y="0" width="120" height="120" fill="#fbecd3" opacity="0.3"/>
       <circle cx="94" cy="20" r="12" fill="var(--amber-500)" opacity="0.55"/>
-      <path d="M0 84 Q30 68 60 82 T120 80 L120 120 L0 120 Z" fill="var(--teal-100)"/>
+      <path d="M0 84 Q30 68 60 82 T120 80 L120 120 L0 120 Z" fill="#e3f4f1"/>
       <path d="M0 96 Q35 84 60 96 T120 94 L120 120 L0 120 Z" fill="var(--teal-500)" opacity="0.28"/>
       <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#e9dcb0" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
       <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#cdbb86" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
@@ -832,45 +846,52 @@ function backgroundSvg(key) {
 // Accessory art, drawn last so it sits on top of the creature (shades,
 // goggles, etc. in particular need to cover the plain eye circles beneath
 // them). Deliberately flat colors -- see the no-gradients note above.
+//
+// Like backgroundSvg() above, these are deliberately fixed colors, not
+// --ink/--card-bg/--amber-100 theme vars -- fixed 2026-08-30 per Eric so an
+// accessory (shades, a mask, glasses frames...) doesn't flip to a near-white
+// color in dark mode the way the pet's mouth used to. --pet-ink/--pet-light
+// are the same fixed tokens the face uses; var(--amber-500)/var(--teal-700)
+// are left alone since those two were already fixed across both themes.
 function accessorySvg(key) {
   if (key === "pacifier") {
-    return `<circle cx="60" cy="77" r="7" fill="var(--amber-100)" stroke="var(--amber-500)" stroke-width="1.8"/><line x1="60" y1="83.5" x2="60" y2="86" stroke="var(--amber-500)" stroke-width="2"/><circle cx="60" cy="90" r="4.5" fill="none" stroke="var(--amber-500)" stroke-width="2.2"/>`;
+    return `<circle cx="60" cy="77" r="7" fill="#fbecd3" stroke="var(--amber-500)" stroke-width="1.8"/><line x1="60" y1="83.5" x2="60" y2="86" stroke="var(--amber-500)" stroke-width="2"/><circle cx="60" cy="90" r="4.5" fill="none" stroke="var(--amber-500)" stroke-width="2.2"/>`;
   }
   if (key === "shades") {
-    return `<rect x="42" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><rect x="62" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="2"/>`;
+    return `<rect x="42" y="59" width="16" height="10" rx="4" fill="var(--pet-ink)"/><rect x="62" y="59" width="16" height="10" rx="4" fill="var(--pet-ink)"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--pet-ink)" stroke-width="2"/>`;
   }
   if (key === "clownnose") {
     return `<circle cx="60" cy="71" r="6.5" fill="#d64b3a"/><circle cx="57.5" cy="68.5" r="1.6" fill="#f2a898" opacity="0.8"/>`;
   }
   if (key === "bowtie") {
-    return `<path d="M52 84 L60 88 L52 92 Z" fill="var(--amber-500)"/><path d="M68 84 L60 88 L68 92 Z" fill="var(--amber-500)"/><circle cx="60" cy="88" r="2" fill="var(--amber-100)"/>`;
+    return `<path d="M52 84 L60 88 L52 92 Z" fill="var(--amber-500)"/><path d="M68 84 L60 88 L68 92 Z" fill="var(--amber-500)"/><circle cx="60" cy="88" r="2" fill="#fbecd3"/>`;
   }
   if (key === "eyepatch") {
-    return `<path d="M40 58 L58 55 L58 72 L41 70 Z" fill="var(--ink)"/><line x1="41" y1="60" x2="31" y2="55" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><line x1="41" y1="66" x2="27" y2="76" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`;
+    return `<path d="M40 58 L58 55 L58 72 L41 70 Z" fill="var(--pet-ink)"/><line x1="41" y1="60" x2="31" y2="55" stroke="var(--pet-ink)" stroke-width="2" stroke-linecap="round"/><line x1="41" y1="66" x2="27" y2="76" stroke="var(--pet-ink)" stroke-width="2" stroke-linecap="round"/>`;
   }
   if (key === "skimask") {
-    return `<ellipse cx="60" cy="68" rx="35" ry="32" fill="var(--ink)"/><circle cx="49" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><circle cx="71" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><path d="M52 78 Q60 84 68 78" stroke="var(--card-bg)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"/>`;
+    return `<ellipse cx="60" cy="68" rx="35" ry="32" fill="var(--pet-ink)"/><circle cx="49" cy="64" r="6" fill="var(--pet-light)" opacity="0.9"/><circle cx="71" cy="64" r="6" fill="var(--pet-light)" opacity="0.9"/><path d="M52 78 Q60 84 68 78" stroke="var(--pet-light)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"/>`;
   }
   if (key === "crown") {
     return `<path d="M44 40 L48 30 L54 38 L60 28 L66 38 L72 30 L76 40 Z" fill="var(--amber-500)"/><circle cx="48" cy="30" r="1.8" fill="var(--teal-700)"/><circle cx="60" cy="28" r="1.8" fill="var(--teal-700)"/><circle cx="72" cy="30" r="1.8" fill="var(--teal-700)"/>`;
   }
   if (key === "goggles") {
-    return `<circle cx="49" cy="64" r="9" fill="var(--card-bg)" stroke="var(--amber-500)" stroke-width="2.5"/><circle cx="71" cy="64" r="9" fill="var(--card-bg)" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="58" y1="64" x2="62" y2="64" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="40" y1="59" x2="30" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/><line x1="80" y1="59" x2="90" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/>`;
+    return `<circle cx="49" cy="64" r="9" fill="var(--pet-light)" stroke="var(--amber-500)" stroke-width="2.5"/><circle cx="71" cy="64" r="9" fill="var(--pet-light)" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="58" y1="64" x2="62" y2="64" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="40" y1="59" x2="30" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/><line x1="80" y1="59" x2="90" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/>`;
   }
   if (key === "roundglasses") {
-    return `<circle cx="49" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="71" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><line x1="56" y1="64" x2="64" y2="64" stroke="var(--ink)" stroke-width="1.6"/>`;
+    return `<circle cx="49" cy="64" r="7" fill="none" stroke="var(--pet-ink)" stroke-width="1.6"/><circle cx="71" cy="64" r="7" fill="none" stroke="var(--pet-ink)" stroke-width="1.6"/><line x1="56" y1="64" x2="64" y2="64" stroke="var(--pet-ink)" stroke-width="1.6"/>`;
   }
   if (key === "catglasses") {
-    return `<path d="M37 60 Q49 52 60 63 Q49 73 37 67 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M83 60 Q71 52 60 63 Q71 73 83 67 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="1.8"/>`;
+    return `<path d="M37 60 Q49 52 60 63 Q49 73 37 67 Z" fill="none" stroke="var(--pet-ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M83 60 Q71 52 60 63 Q71 73 83 67 Z" fill="none" stroke="var(--pet-ink)" stroke-width="1.8" stroke-linejoin="round"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--pet-ink)" stroke-width="1.8"/>`;
   }
   if (key === "monocle") {
     return `<circle cx="71" cy="64" r="7" fill="none" stroke="var(--amber-500)" stroke-width="1.8"/><path d="M77.5 70 Q83 78 78 87" stroke="var(--amber-500)" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
   }
   if (key === "mustache") {
-    return `<path d="M45 74 Q52 69 60 74 Q68 69 75 74 Q68 79 60 75.5 Q52 79 45 74 Z" fill="var(--ink)"/>`;
+    return `<path d="M45 74 Q52 69 60 74 Q68 69 75 74 Q68 79 60 75.5 Q52 79 45 74 Z" fill="var(--pet-ink)"/>`;
   }
   if (key === "tophat") {
-    return `<rect x="46" y="20" width="28" height="20" rx="2" fill="var(--ink)"/><rect x="39" y="38" width="42" height="6" rx="2" fill="var(--ink)"/><rect x="46" y="33" width="28" height="4" fill="var(--amber-500)"/>`;
+    return `<rect x="46" y="20" width="28" height="20" rx="2" fill="var(--pet-ink)"/><rect x="39" y="38" width="42" height="6" rx="2" fill="var(--pet-ink)"/><rect x="46" y="33" width="28" height="4" fill="var(--amber-500)"/>`;
   }
   // "Hi, My Name Is..." meeting-style sticker badge, sitting low and just
   // left of center -- roughly where a breast pocket would be on the body
