@@ -245,14 +245,24 @@ function petStageForLevel(level) {
 }
 
 // Cosmetic unlocks -- pure flavor, no gameplay effect. "none" is always
-// unlocked and is how Shawn un-equips a slot. Levels are staggered against
-// PET_STAGES so there's usually something new close by as he levels up.
+// unlocked and is how Shawn un-equips a slot. Nothing unlocks until the egg
+// hatches at level 3 -- from there, one new accessory unlocks every single
+// level through 15, so there's always something new right around the corner.
 const ACCESSORIES = [
   { key: "none", name: "None", minLevel: 1 },
-  { key: "bandana", name: "Bandana", minLevel: 2 },
+  { key: "bandana", name: "Bandana", minLevel: 3 },
   { key: "shades", name: "Shades", minLevel: 4 },
+  { key: "clownnose", name: "Clown Nose", minLevel: 5 },
   { key: "bowtie", name: "Bow Tie", minLevel: 6 },
+  { key: "eyepatch", name: "Eye Patch", minLevel: 7 },
+  { key: "skimask", name: "Ski Mask", minLevel: 8 },
   { key: "crown", name: "Flower Crown", minLevel: 9 },
+  { key: "goggles", name: "Goggles", minLevel: 10 },
+  { key: "roundglasses", name: "Round Glasses", minLevel: 11 },
+  { key: "catglasses", name: "Cat-Eye Glasses", minLevel: 12 },
+  { key: "monocle", name: "Monocle", minLevel: 13 },
+  { key: "mustache", name: "Mustache", minLevel: 14 },
+  { key: "tophat", name: "Top Hat", minLevel: 15 },
 ];
 
 const BACKGROUNDS = [
@@ -541,8 +551,9 @@ function backgroundSvg(key) {
   return ""; // none
 }
 
-// Accessory art, drawn last so it sits on top of the creature (shades in
-// particular need to cover the plain eye circles beneath them).
+// Accessory art, drawn last so it sits on top of the creature (shades,
+// goggles, etc. in particular need to cover the plain eye circles beneath
+// them). Deliberately flat colors -- see the no-gradients note above.
 function accessorySvg(key) {
   if (key === "bandana") {
     return `<path d="M36 86 Q60 100 84 86 L78 98 Q60 106 42 98 Z" fill="var(--amber-500)"/><circle cx="60" cy="94" r="2.4" fill="var(--amber-100)"/>`;
@@ -550,13 +561,50 @@ function accessorySvg(key) {
   if (key === "shades") {
     return `<rect x="42" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><rect x="62" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="2"/>`;
   }
+  if (key === "clownnose") {
+    return `<circle cx="60" cy="71" r="6.5" fill="#d64b3a"/><circle cx="57.5" cy="68.5" r="1.6" fill="#f2a898" opacity="0.8"/>`;
+  }
   if (key === "bowtie") {
     return `<path d="M52 84 L60 88 L52 92 Z" fill="var(--amber-500)"/><path d="M68 84 L60 88 L68 92 Z" fill="var(--amber-500)"/><circle cx="60" cy="88" r="2" fill="var(--amber-100)"/>`;
+  }
+  if (key === "eyepatch") {
+    return `<path d="M40 58 L58 55 L58 72 L41 70 Z" fill="var(--ink)"/><line x1="41" y1="60" x2="20" y2="50" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/><line x1="41" y1="66" x2="20" y2="74" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  if (key === "skimask") {
+    return `<path d="M26 44 Q60 24 94 44 L94 84 Q60 100 26 84 Z" fill="var(--ink)"/><circle cx="49" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><circle cx="71" cy="64" r="6" fill="var(--card-bg)" opacity="0.9"/><path d="M52 78 Q60 84 68 78" stroke="var(--card-bg)" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.9"/>`;
   }
   if (key === "crown") {
     return `<path d="M44 40 L48 30 L54 38 L60 28 L66 38 L72 30 L76 40 Z" fill="var(--amber-500)"/><circle cx="48" cy="30" r="1.8" fill="var(--teal-700)"/><circle cx="60" cy="28" r="1.8" fill="var(--teal-700)"/><circle cx="72" cy="30" r="1.8" fill="var(--teal-700)"/>`;
   }
+  if (key === "goggles") {
+    return `<circle cx="49" cy="64" r="9" fill="var(--card-bg)" stroke="var(--amber-500)" stroke-width="2.5"/><circle cx="71" cy="64" r="9" fill="var(--card-bg)" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="58" y1="64" x2="62" y2="64" stroke="var(--amber-500)" stroke-width="2.5"/><line x1="40" y1="59" x2="30" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/><line x1="80" y1="59" x2="90" y2="52" stroke="var(--amber-500)" stroke-width="2" stroke-linecap="round"/>`;
+  }
+  if (key === "roundglasses") {
+    return `<circle cx="49" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><circle cx="71" cy="64" r="7" fill="none" stroke="var(--ink)" stroke-width="1.6"/><line x1="56" y1="64" x2="64" y2="64" stroke="var(--ink)" stroke-width="1.6"/>`;
+  }
+  if (key === "catglasses") {
+    return `<path d="M41 61 Q49 55 59 63 Q49 70 41 68 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><path d="M79 61 Q71 55 61 63 Q71 70 79 68 Z" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/><line x1="59" y1="63" x2="61" y2="63" stroke="var(--ink)" stroke-width="1.8"/>`;
+  }
+  if (key === "monocle") {
+    return `<circle cx="71" cy="64" r="7" fill="none" stroke="var(--amber-500)" stroke-width="1.8"/><path d="M77.5 70 Q83 78 78 87" stroke="var(--amber-500)" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
+  }
+  if (key === "mustache") {
+    return `<path d="M45 74 Q52 69 60 74 Q68 69 75 74 Q68 79 60 75.5 Q52 79 45 74 Z" fill="var(--ink)"/>`;
+  }
+  if (key === "tophat") {
+    return `<rect x="46" y="12" width="28" height="20" rx="2" fill="var(--ink)"/><rect x="39" y="30" width="42" height="6" rx="2" fill="var(--ink)"/><rect x="46" y="25" width="28" height="4" fill="var(--amber-500)"/>`;
+  }
   return ""; // none
+}
+
+// Shown in the unlock grid in place of an item's real art until it's
+// unlocked -- Shawn shouldn't get a preview of what's coming, just a hint
+// that something is waiting at that level.
+function mysteryPreviewSvg() {
+  return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Locked">
+    <ellipse cx="60" cy="70" rx="34" ry="30" fill="var(--border)"/>
+    <text x="60" y="80" text-anchor="middle" font-size="34" font-weight="700" fill="var(--ink-soft)">?</text>
+  </svg>`;
 }
 
 function renderPet() {
@@ -617,13 +665,19 @@ function renderPetUnlockGrid(kind) {
     if (!unlocked) tile.classList.add("locked");
     if (equippedKey === item.key) tile.classList.add("equipped");
 
-    const previewArt = isAccessory
+    // Locked items stay a surprise -- no preview of what they look like on
+    // the pet, and no name reveal, just a "?" placeholder and the level
+    // they unlock at.
+    const previewArt = !unlocked
+      ? mysteryPreviewSvg()
+      : isAccessory
       ? petSvg(stage.key, item.key, data.equippedBackground)
       : petSvg(stage.key, data.equippedAccessory, item.key);
+    const displayName = unlocked ? item.name : "???";
 
     tile.innerHTML = `
       <div class="pet-unlock-preview">${previewArt}</div>
-      <span class="pet-unlock-name">${item.name}</span>
+      <span class="pet-unlock-name">${displayName}</span>
       <span class="pet-unlock-sub">${unlocked ? (equippedKey === item.key ? "Equipped" : "") : `Unlocks at level ${item.minLevel}`}</span>
     `;
     if (unlocked) {
