@@ -87,6 +87,12 @@ function defaultData() {
     // applies to *today*, so that overlap can't actually happen, but this
     // keeps the two payout paths cleanly distinguishable either way).
     autoXpDates: [],
+    // True once the one-time launch-day XP reset (applyLaunchXpReset) has
+    // run for this save data. Defaults true here because a brand-new install
+    // starts at 0 XP anyway and has nothing to reset -- it's loadData() below
+    // that treats *existing* saved data missing this field as needing the
+    // reset, since the field didn't exist before this system shipped.
+    xpResetApplied: true,
     // Pet customization: a nickname Shawn can optionally give it, the date it
     // "hatched" (first time this data was ever created, shown in its detail
     // view), plus which unlocked accessory/background are currently equipped
@@ -116,6 +122,10 @@ function loadData() {
       pledgedDays: Array.isArray(parsed.pledgedDays) ? parsed.pledgedDays.slice().sort() : [],
       journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
       autoXpDates: Array.isArray(parsed.autoXpDates) ? parsed.autoXpDates.slice().sort() : [],
+      // Missing on any save data from before this field existed -- i.e.
+      // every real existing user -- so it defaults to false (not yet
+      // applied) here, unlike defaultData()'s true. See applyLaunchXpReset().
+      xpResetApplied: typeof parsed.xpResetApplied === "boolean" ? parsed.xpResetApplied : false,
       petName: typeof parsed.petName === "string" ? parsed.petName : "",
       petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
       equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
@@ -318,6 +328,32 @@ function todayIsSlip() {
   return data.relapses.includes(todayStr());
 }
 
+// One-time migration for anyone whose save data predates this XP system
+// (pledge + mark-clean rebalance + auto half-credit) -- loadData() gives
+// existing saves xpResetApplied: false since the field didn't exist before,
+// so the very first load after this ships would otherwise walk all the way
+// back to quitDate and backfill a pile of retroactive auto-XP for days that
+// happened before the reward system did. Instead: XP starts over at 0, and
+// every past day (quitDate through yesterday) gets marked as already
+// resolved in autoXpDates -- with no payout -- so processPastCleanDays()
+// below has nothing left to backfill. Leaves confirmedDays, pledgedDays, the
+// streak, and everything else untouched; this only resets the XP counter and
+// pre-empts its own catch-up mechanic. Runs once, guarded by the flag.
+function applyLaunchXpReset() {
+  if (data.xpResetApplied) return;
+  data.xp = 0;
+  if (data.settings.quitDate) {
+    const yesterday = addDays(todayStr(), -1);
+    let cursor = data.settings.quitDate;
+    while (cursor <= yesterday) {
+      if (!data.autoXpDates.includes(cursor)) data.autoXpDates.push(cursor);
+      cursor = addDays(cursor, 1);
+    }
+  }
+  data.xpResetApplied = true;
+  saveData();
+}
+
 // Quietly backfills half-XP (XP_CLEAN_DAY_AUTO) for any past, fully-over day
 // that was clean but never got an active "Mark today clean" tap -- the
 // streak itself never needed that tap (always automatic/forgiving), and now
@@ -354,6 +390,7 @@ function init() {
   calYear = t.getFullYear();
   calMonth = t.getMonth();
 
+  applyLaunchXpReset();
   processPastCleanDays();
   wireEvents();
   registerServiceWorker();
@@ -1071,6 +1108,7 @@ function importBackup(e) {
         pledgedDays: Array.isArray(parsed.pledgedDays) ? parsed.pledgedDays.slice().sort() : [],
         journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
         autoXpDates: Array.isArray(parsed.autoXpDates) ? parsed.autoXpDates.slice().sort() : [],
+        xpResetApplied: typeof parsed.xpResetApplied === "boolean" ? parsed.xpResetApplied : false,
         petName: typeof parsed.petName === "string" ? parsed.petName : "",
         petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
         equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
