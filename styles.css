@@ -313,3 +313,115 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
 .settings-data-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
 .file-btn { display: inline-flex; align-items: center; cursor: pointer; }
+
+/* ---------- Mark-today-clean button + confirmed badge ---------- */
+
+.btn-fanfare {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  background: linear-gradient(135deg, var(--amber-500), var(--teal-500));
+  color: white;
+  box-shadow: 0 2px 10px rgba(201, 130, 15, 0.35);
+}
+.btn-fanfare:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-fanfare:disabled { background: var(--teal-100); color: var(--tint-ink); box-shadow: none; opacity: 0.8; }
+
+.today-confirmed-badge {
+  margin: 12px 0 0;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--teal-100);
+  color: var(--tint-ink);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* ---------- Pet companion + XP ---------- */
+
+.pet-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+
+.pet-art {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  animation: pet-bob 3.4s ease-in-out infinite;
+}
+.pet-svg { width: 100%; height: 100%; }
+
+@keyframes pet-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.pet-info { flex: 1; min-width: 0; }
+
+.pet-name-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pet-stage-name { font-weight: 700; font-size: 16px; }
+.pet-level { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.xp-bar {
+  margin-top: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber-500), var(--teal-500));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Small star marker on calendar days Shawn actively confirmed (distinct from
+   the plain note-dot, which just means "has a note"). */
+.confirmed-star {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font-size: 8px;
+  color: var(--amber-500);
+  line-height: 1;
+}
+
+/* ---------- Fanfare modal ---------- */
+
+.fanfare-modal { text-align: center; }
+.fanfare-burst {
+  font-size: 40px;
+  animation: fanfare-pop 0.5s ease;
+}
+@keyframes fanfare-pop {
+  0% { transform: scale(0.4) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); }
+}
+.fanfare-xp {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--teal-700);
+  margin: 4px 0;
+}
+.fanfare-levelup {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--amber-100);
+  color: var(--amber-500);
+  font-weight: 700;
+  font-size: 13px;
+}
