@@ -93,12 +93,13 @@ function defaultData() {
     // that treats *existing* saved data missing this field as needing the
     // reset, since the field didn't exist before this system shipped.
     xpResetApplied: true,
-    // Pet customization: a nickname Shawn can optionally give it, the date it
-    // "hatched" (first time this data was ever created, shown in its detail
-    // view), plus which unlocked accessory/background are currently equipped
-    // ("none" = default).
+    // Pet customization: a nickname Shawn can optionally give it, plus which
+    // unlocked accessory/background are currently equipped ("none" = default).
     petName: "",
-    petBirthdate: todayStr(),
+    // The date the pet actually hatched out of its egg (reached level 3) --
+    // null while it's still an egg. Set once, the moment it happens, by
+    // awardXp() below. Not the date the save data was created.
+    petBirthdate: null,
     equippedAccessory: "none",
     equippedBackground: "none",
   };
@@ -127,13 +128,28 @@ function loadData() {
       // applied) here, unlike defaultData()'s true. See applyLaunchXpReset().
       xpResetApplied: typeof parsed.xpResetApplied === "boolean" ? parsed.xpResetApplied : false,
       petName: typeof parsed.petName === "string" ? parsed.petName : "",
-      petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
+      petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
       equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
       equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
     };
   } catch (e) {
     console.error("Failed to load data, starting fresh.", e);
     return defaultData();
+  }
+}
+
+// Self-healing invariant: an egg-stage pet (level < 3) should never have a
+// hatch date, but any save written before this fix shipped may still be
+// carrying one (petBirthdate used to mean "when this save was created," not
+// "when the pet hatched" -- see defaultData() above). Clearing it here means
+// the "Hatched ..." line never shows for a pet that's visibly still an egg;
+// awardXp() below sets a fresh, correct value the moment it actually hatches.
+// Cheap enough to just run on every load rather than gating it behind a flag.
+function enforceHatchDateInvariant() {
+  const { level } = xpProgress();
+  if (level < 3 && data.petBirthdate) {
+    data.petBirthdate = null;
+    saveData();
   }
 }
 
@@ -200,9 +216,14 @@ function totalClearDays() {
   if (!data.settings.quitDate) return 0;
   const today = todayStr();
   if (data.settings.quitDate > today) return 0;
-  const span = daysBetween(data.settings.quitDate, today) + 1;
+  // Same "today isn't banked until it's over" rule as currentStreakDays() /
+  // longestStreakDays() -- changed 2026-08-30, per Eric noticing this could
+  // read one day ahead of the streak counters (e.g. "2 days clean" up top
+  // but "3" total) even with zero slips logged, which read as a bug. All
+  // three numbers now agree on what counts as a completed day.
+  const span = daysBetween(data.settings.quitDate, today);
   const relapsesInRange = data.relapses.filter(
-    (r) => r >= data.settings.quitDate && r <= today
+    (r) => r >= data.settings.quitDate && r < today
   ).length;
   return Math.max(0, span - relapsesInRange);
 }
@@ -219,6 +240,22 @@ const XP_PLEDGE = 35; // tapping the one-time morning/afternoon pledge, before 8
 const XP_CLEAN_DAY = 50; // tapping "Mark today clean" after 8pm -- exactly enough to hit level 2 solo, day one
 const XP_CLEAN_DAY_AUTO = XP_CLEAN_DAY / 2; // half credit, quietly backfilled for a clean day Shawn never actively confirmed -- see processPastCleanDays()
 const XP_JOURNAL_ENTRY = 15; // writing a journal note, once per calendar day
+
+// Shown after tapping the pledge button -- the day hasn't happened yet at
+// that point, so (unlike the after-8pm fanfare) this isn't the moment to ask
+// "how did today go." A short line of encouragement instead, picked at
+// random each time. author is null for a few generic/unattributed ones.
+const PLEDGE_ENCOURAGEMENTS = [
+  { text: "One day at a time.", author: null },
+  { text: "Progress, not perfection.", author: null },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "Fall seven times, stand up eight.", author: "Japanese proverb" },
+  { text: "The best way out is always through.", author: "Robert Frost" },
+  { text: "Believe you can, and you're halfway there.", author: "Theodore Roosevelt" },
+  { text: "Small steps, every day, add up to big change.", author: null },
+  { text: "You don't have to be great to start. You have to start to be great.", author: "Zig Ziglar" },
+  { text: "Every day you choose this, you win.", author: null },
+];
 
 // Cumulative XP required to REACH a given level (level 1 starts at 0 XP).
 // Not a plain quadratic -- level 2 is pinned to exactly XP_CLEAN_DAY (50) so
@@ -257,6 +294,14 @@ function awardXp(amount) {
   const before = levelForXp(data.xp || 0);
   data.xp = (data.xp || 0) + amount;
   const after = levelForXp(data.xp);
+  // The moment the pet actually crosses into level 3, record today as its
+  // real hatch date -- see the petBirthdate comment in defaultData() and
+  // enforceHatchDateInvariant() above. Every XP-earning path (pledge, mark
+  // clean, journal entry, and the silent past-day auto-credit) funnels
+  // through here, so this is the one place that needs to know about it.
+  if (after >= 3 && !data.petBirthdate) {
+    data.petBirthdate = todayStr();
+  }
   return { gained: amount, leveledUp: after > before, newLevel: after };
 }
 
@@ -392,6 +437,7 @@ function init() {
 
   applyLaunchXpReset();
   processPastCleanDays();
+  enforceHatchDateInvariant();
   wireEvents();
   registerServiceWorker();
   initOneSignal();
@@ -736,7 +782,12 @@ function renderPetModal() {
   document.getElementById("petModalStageLevel").textContent = `${stage.name} · Level ${level}`;
   document.getElementById("petModalXpBarFill").style.width = `${pct}%`;
   document.getElementById("petModalXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
-  document.getElementById("petModalBirthdate").textContent = `Hatched ${formatPretty(data.petBirthdate || todayStr())}`;
+  // Only a pet that's actually hatched (level 3+) has a real hatch date --
+  // see the petBirthdate comment in defaultData() / awardXp(). Still-an-egg
+  // pets get an honest "not yet" line instead of a fabricated date.
+  document.getElementById("petModalBirthdate").textContent = data.petBirthdate
+    ? `Hatched ${formatPretty(data.petBirthdate)}`
+    : "Still in the egg — hatches at level 3";
 
   renderPetUnlockGrid("accessory");
   renderPetUnlockGrid("background");
@@ -862,7 +913,7 @@ function handlePledge() {
   saveData();
   renderCleanDayButton();
   renderPet();
-  openFanfareModal(result);
+  openFanfareModal(result, "pledge");
 }
 
 function handleMarkCleanDay() {
@@ -874,15 +925,42 @@ function handleMarkCleanDay() {
   renderCleanDayButton();
   renderPet();
   renderCalendar();
-  openFanfareModal(result);
+  openFanfareModal(result, "clean");
 }
 
-function openFanfareModal(result) {
+// kind is "pledge" (before 8pm), "clean" (after 8pm, the default), or
+// "journal" (a journal entry itself earned the XP) -- each gets its own
+// prompt/actions below since "want to write down how today went" only makes
+// sense for one of the three.
+function openFanfareModal(result, kind) {
   document.getElementById("fanfareXpLine").textContent = `+${result.gained} XP for today`;
   document.getElementById("fanfareLevelUp").classList.toggle("hidden", !result.leveledUp);
   if (result.leveledUp) {
     document.getElementById("fanfareLevelUp").textContent = `Level up! ${result.newLevel}`;
   }
+
+  const promptEl = document.getElementById("fanfarePrompt");
+  const journalBtn = document.getElementById("fanfareJournalBtn");
+  const notNowBtn = document.getElementById("fanfareNotNowBtn");
+
+  if (kind === "pledge") {
+    const pick = PLEDGE_ENCOURAGEMENTS[Math.floor(Math.random() * PLEDGE_ENCOURAGEMENTS.length)];
+    promptEl.textContent = pick.author ? `"${pick.text}" — ${pick.author}` : pick.text;
+    promptEl.classList.add("fanfare-quote");
+    journalBtn.classList.add("hidden");
+    notNowBtn.textContent = "Let's do this";
+  } else if (kind === "journal") {
+    promptEl.textContent = "Nice work checking in with yourself today.";
+    promptEl.classList.remove("fanfare-quote");
+    journalBtn.classList.add("hidden");
+    notNowBtn.textContent = "Nice!";
+  } else {
+    promptEl.textContent = "Want to write down how today went?";
+    promptEl.classList.remove("fanfare-quote");
+    journalBtn.classList.remove("hidden");
+    notNowBtn.textContent = "Not now";
+  }
+
   document.getElementById("fanfareModal").classList.remove("hidden");
 }
 
@@ -1021,7 +1099,7 @@ function wireEvents() {
     closeDayModal();
     renderCalendar();
     renderPet();
-    if (leveledResult) openFanfareModal(leveledResult);
+    if (leveledResult) openFanfareModal(leveledResult, "journal");
   });
 
   // Slip modal
@@ -1110,7 +1188,7 @@ function importBackup(e) {
         autoXpDates: Array.isArray(parsed.autoXpDates) ? parsed.autoXpDates.slice().sort() : [],
         xpResetApplied: typeof parsed.xpResetApplied === "boolean" ? parsed.xpResetApplied : false,
         petName: typeof parsed.petName === "string" ? parsed.petName : "",
-        petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
+        petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
         equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
         equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
       };
