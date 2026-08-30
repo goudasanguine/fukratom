@@ -52,6 +52,23 @@
         <button id="logSlipBtn" class="btn btn-quiet">Log a slip</button>
         <button id="addNoteBtn" class="btn btn-quiet">Add today's note</button>
       </div>
+      <button id="markCleanBtn" class="btn btn-fanfare hidden">Mark today clean 🌟</button>
+      <p id="todayConfirmedBadge" class="today-confirmed-badge hidden">✓ Today confirmed clean</p>
+    </section>
+
+    <!-- Pet companion -->
+    <section class="card pet-card">
+      <div id="petArt" class="pet-art"></div>
+      <div class="pet-info">
+        <div class="pet-name-row">
+          <span id="petStageName" class="pet-stage-name">Egg</span>
+          <span id="petLevel" class="pet-level">Level 1</span>
+        </div>
+        <div class="xp-bar">
+          <div id="petXpBarFill" class="xp-bar-fill" style="width: 0%"></div>
+        </div>
+        <p id="petXpLabel" class="hint">0 / 50 XP to next level</p>
+      </div>
     </section>
 
     <!-- Money saved -->
@@ -130,6 +147,22 @@
     <div class="modal-actions">
       <button id="slipCancelBtn" class="btn btn-quiet">Cancel</button>
       <button id="slipConfirmBtn" class="btn btn-primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fanfare modal (shown after marking a clean day or writing a journal entry) -->
+<div id="fanfareModal" class="modal-overlay hidden">
+  <div class="modal card fanfare-modal">
+    <button class="modal-close" id="fanfareClose" aria-label="Close">×</button>
+    <div class="fanfare-burst" aria-hidden="true">🎉</div>
+    <h2>Nice work.</h2>
+    <p id="fanfareXpLine" class="fanfare-xp">+15 XP for today</p>
+    <p id="fanfareLevelUp" class="fanfare-levelup hidden">Level up!</p>
+    <p class="gentle-copy">Want to write down how today went?</p>
+    <div class="modal-actions">
+      <button id="fanfareNotNowBtn" class="btn btn-quiet">Not now</button>
+      <button id="fanfareJournalBtn" class="btn btn-primary">Add a journal entry</button>
     </div>
   </div>
 </div>
