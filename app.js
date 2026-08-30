@@ -709,9 +709,15 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
   </g>`;
 
   if (stageKey === "egg") {
+    // Shell fill baked to its light-mode hex (#fbecd3), same reasoning as the
+    // face/accessories/backgrounds above -- fixed 2026-08-31 after Eric asked
+    // for the egg to also stay put with a light-mode look regardless of
+    // theme, rather than the shell going dark like the eventual pet's own
+    // dark-mode variables used to. var(--amber-500) stays a var since it was
+    // already fixed across both themes.
     return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Egg">
       ${bg}
-      <ellipse cx="60" cy="68" rx="30" ry="38" fill="var(--amber-100)" stroke="var(--amber-500)" stroke-width="2.5"/>
+      <ellipse cx="60" cy="68" rx="30" ry="38" fill="#fbecd3" stroke="var(--amber-500)" stroke-width="2.5"/>
       <path d="M50 40 L58 56 L48 60 L64 82" stroke="var(--amber-500)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       ${acc}
     </svg>`;
@@ -752,10 +758,13 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
       ${eyes}${smile}${tattoos}${acc}
     </svg>`;
   }
-  // guardian -- fully evolved, small wings and a sparkle aura
+  // guardian -- fully evolved, small wings and a sparkle aura. Halo wash
+  // baked to its light-mode hex, same as the egg shell above -- this is part
+  // of the pet's own art, not the equipped background, so it gets the same
+  // fixed-color treatment.
   return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Guardian">
     ${bg}
-    <circle cx="60" cy="68" r="46" fill="var(--teal-100)" opacity="0.6"/>
+    <circle cx="60" cy="68" r="46" fill="#e3f4f1" opacity="0.6"/>
     <path d="M26 60 Q10 62 14 84 Q28 82 34 68 Z" fill="var(--teal-700)"/>
     <path d="M94 60 Q110 62 106 84 Q92 82 86 68 Z" fill="var(--teal-700)"/>
     <path d="M60 26 Q46 10 32 22 Q44 34 60 36 Z" fill="var(--amber-500)"/>
@@ -898,12 +907,17 @@ function accessorySvg(key) {
   // ellipse below the face. Hardcoded cream + red like clownnose above,
   // since a badge sticker shouldn't recolor with the theme.
   if (key === "namebadge") {
+    // Sized up substantially (2026-08-31, per Eric) -- the original badge
+    // (26x17, tucked to one side) read as an unreadable smudge at pet-card
+    // and pet-unlock-grid scale. Now spans nearly the full chest, centered,
+    // still clear of the mouth above it (mouth sits ~y76-82; this starts at
+    // y76 but the text itself doesn't start until the mouth is well clear).
     return `<g>
-      <rect x="38" y="80" width="26" height="17" rx="1.5" fill="#fdf6ea" stroke="#d8c9a3" stroke-width="1"/>
-      <text x="51" y="87" text-anchor="middle" font-size="6" font-weight="800" fill="#d64b3a">HI</text>
-      <text x="51" y="92.5" text-anchor="middle" font-size="3.1" font-weight="600" fill="#7a6f56">MY NAME IS</text>
-      <line x1="42" y1="95" x2="60" y2="95" stroke="#d64b3a" stroke-width="1"/>
-      <circle cx="51" cy="80" r="1.3" fill="#b7b0a0"/>
+      <rect x="30" y="76" width="60" height="24" rx="3" fill="#fdf6ea" stroke="#d8c9a3" stroke-width="1.4"/>
+      <circle cx="60" cy="76" r="2" fill="#b7b0a0"/>
+      <text x="60" y="88" text-anchor="middle" font-size="11" font-weight="800" fill="#d64b3a">HI</text>
+      <line x1="36" y1="92.5" x2="84" y2="92.5" stroke="#d64b3a" stroke-width="1.3"/>
+      <text x="60" y="98" text-anchor="middle" font-size="5" font-weight="700" fill="#7a6f56" letter-spacing="0.3">MY NAME IS</text>
     </g>`;
   }
   return ""; // none
