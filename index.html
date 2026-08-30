@@ -170,6 +170,21 @@
   </div>
 </div>
 
+<!-- New cosmetic unlock modal (accessory/background earned by a live action --
+     see queueUnlockAnnouncements() in app.js) -->
+<div id="unlockModal" class="modal-overlay hidden">
+  <div class="modal card fanfare-modal">
+    <div class="fanfare-burst" aria-hidden="true">🎁</div>
+    <h2>New unlock!</h2>
+    <div id="unlockPreview" class="unlock-preview"></div>
+    <p id="unlockName" class="fanfare-xp">Item name</p>
+    <p id="unlockKindLabel" class="hint">New accessory unlocked</p>
+    <div class="modal-actions">
+      <button id="unlockGotItBtn" class="btn btn-primary" style="width:100%;">Got it!</button>
+    </div>
+  </div>
+</div>
+
 <!-- Pet detail modal -->
 <div id="petModal" class="modal-overlay hidden">
   <div class="modal card pet-modal">
