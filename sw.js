@@ -5,7 +5,7 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 // Minimal offline cache for Fuck Kratom.
 // Bump CACHE_NAME whenever app files change so users pick up updates.
-const CACHE_NAME = "fuck-kratom-v17";
+const CACHE_NAME = "fuck-kratom-v18";
 const APP_SHELL = [
   "./",
   "./index.html",
