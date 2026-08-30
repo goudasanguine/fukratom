@@ -512,6 +512,8 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 /* ---------- Fanfare modal ---------- */
 
 .fanfare-modal { text-align: center; }
+.fanfare-modal .modal-actions { justify-content: center; }
+.fanfare-quote { font-style: italic; }
 .fanfare-burst {
   font-size: 40px;
   animation: fanfare-pop 0.5s ease;
