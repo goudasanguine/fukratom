@@ -185,12 +185,17 @@
   </div>
 </div>
 
-<!-- Pet detail modal -->
-<div id="petModal" class="modal-overlay hidden">
-  <div class="modal card pet-modal">
-    <button class="modal-close" id="petModalClose" aria-label="Close">×</button>
-    <div id="petModalArt" class="pet-modal-art"></div>
-    <div class="pet-modal-name-row">
+<!-- Pet full-screen stage: tapping the pet card on the main page opens this
+     (redesigned 2026-08-31, per Eric: "the pet and background take up the
+     whole screen"). The pet + its equipped background fill the screen;
+     name/level/XP/hatch-date sit in a bottom panel over a scrim. -->
+<div id="petModal" class="pet-stage hidden">
+  <div id="petModalBg" class="pet-stage-bg"></div>
+  <div id="petModalArt" class="pet-stage-art"></div>
+  <div class="pet-stage-scrim" aria-hidden="true"></div>
+  <button class="pet-stage-close" id="petModalClose" aria-label="Close">×</button>
+  <div class="pet-stage-panel">
+    <div class="pet-stage-name-row">
       <input type="text" id="petNameInput" maxlength="24" placeholder="Give it a name">
     </div>
     <p id="petModalStageLevel" class="pet-modal-stage-level">Egg · Level 1</p>
@@ -199,12 +204,20 @@
     </div>
     <p id="petModalXpLabel" class="hint">0 / 50 XP to next level</p>
     <p id="petModalBirthdate" class="hint pet-modal-birthdate"></p>
+    <div class="pet-stage-actions">
+      <button type="button" id="openAccessoryPickerBtn" class="btn btn-quiet">👕 Accessories</button>
+      <button type="button" id="openBackgroundPickerBtn" class="btn btn-quiet">🖼️ Backgrounds</button>
+    </div>
+  </div>
+</div>
 
-    <h3 class="pet-modal-section-title">Accessories</h3>
-    <div id="petAccessoryGrid" class="pet-unlock-grid"></div>
-
-    <h3 class="pet-modal-section-title">Backgrounds</h3>
-    <div id="petBackgroundGrid" class="pet-unlock-grid"></div>
+<!-- Accessory/background picker, opened from the two buttons above. One
+     shared grid, retitled and re-rendered per kind by openPetPicker(). -->
+<div id="petPickerModal" class="pet-stage pet-picker hidden">
+  <button class="pet-stage-close" id="petPickerBack" aria-label="Back">‹</button>
+  <h2 id="petPickerTitle" class="pet-picker-title">Accessories</h2>
+  <div class="pet-picker-scroll">
+    <div id="petPickerGrid" class="pet-unlock-grid"></div>
   </div>
 </div>
 
