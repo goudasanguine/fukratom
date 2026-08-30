@@ -102,11 +102,31 @@ function defaultData() {
     petBirthdate: null,
     equippedAccessory: "none",
     equippedBackground: "none",
+    // Cosmetics unlocked by DOING something once, rather than by level --
+    // see the "unlock" descriptor on ACCESSORIES/BACKGROUNDS items below.
+    // Each flips true forever the first time that action happens and never
+    // goes back, regardless of level.
+    eventUnlocks: {
+      firstJournal: false, // unlocks the Sakura Garden background
+      firstPledge: false, // unlocks the Green Knoll background
+      firstMarkClean: false, // unlocks the "Hi, My Name Is..." badge accessory
+    },
   };
 }
 
 let data = loadData();
 applyTheme(); // do this immediately (before first paint) to avoid a flash of the wrong theme
+
+// Shared by loadData() and importBackup() so the two can't drift. Missing/
+// malformed input just means "not unlocked yet" for that one -- never throws.
+function parseEventUnlocks(parsed) {
+  const src = parsed && typeof parsed === "object" ? parsed : {};
+  return {
+    firstJournal: !!src.firstJournal,
+    firstPledge: !!src.firstPledge,
+    firstMarkClean: !!src.firstMarkClean,
+  };
+}
 
 function loadData() {
   try {
@@ -131,6 +151,7 @@ function loadData() {
       petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
       equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
       equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
+      eventUnlocks: parseEventUnlocks(parsed.eventUnlocks),
     };
   } catch (e) {
     console.error("Failed to load data, starting fresh.", e);
@@ -151,6 +172,21 @@ function enforceHatchDateInvariant() {
     data.petBirthdate = null;
     saveData();
   }
+}
+
+// One-time-in-spirit backfill for anyone who pledged, marked a day clean, or
+// journaled before these action-unlocked cosmetics existed: history (the
+// pledgedDays/confirmedDays/journalXpDates arrays) already proves the action
+// happened, so the matching item unlocks retroactively -- quietly, with no
+// announcement popup, since that's reserved for a live in-the-moment action
+// (see queueUnlockAnnouncements() below). Just OR-ing booleans forward, so
+// it's safe and cheap to run on every load rather than gating behind a flag.
+function applyEventUnlockBackfill() {
+  const before = JSON.stringify(data.eventUnlocks);
+  if (data.pledgedDays.length > 0) data.eventUnlocks.firstPledge = true;
+  if (data.confirmedDays.length > 0) data.eventUnlocks.firstMarkClean = true;
+  if (data.journalXpDates.length > 0) data.eventUnlocks.firstJournal = true;
+  if (JSON.stringify(data.eventUnlocks) !== before) saveData();
 }
 
 function saveData() {
@@ -325,36 +361,89 @@ function petStageForLevel(level) {
 }
 
 // Cosmetic unlocks -- pure flavor, no gameplay effect. "none" is always
-// unlocked and is how Shawn un-equips a slot. Nothing unlocks until the egg
-// hatches at level 3 -- from there, one new accessory unlocks every single
-// level through 15, so there's always something new right around the corner.
+// unlocked and is how Shawn un-equips a slot. Every item carries an `unlock`
+// descriptor instead of a bare level number, since two shapes exist:
+//   { type: "level", minLevel: N } -- unlocked once xpProgress().level >= N
+//   { type: "event", event: "firstPledge"|"firstJournal"|"firstMarkClean",
+//     label: "..." } -- unlocked the moment data.eventUnlocks[event] is true,
+//     independent of level. label is the locked-tile hint text (see
+//     renderPetUnlockGrid()) -- there's no level number to show instead.
+// atLevel() is just a shorthand for building the common case below.
+function atLevel(n) {
+  return { type: "level", minLevel: n };
+}
+
+// Nothing unlocks until the egg hatches at level 3 -- from there, one new
+// accessory unlocks every single level through 15, so there's always
+// something new right around the corner. "Hi, My Name Is..." (added
+// 2026-08-30, per Eric) breaks that level pattern on purpose: it unlocks the
+// first time Shawn marks a day clean, whatever level he's at when that
+// happens, like the badge someone might wear to a meeting.
 const ACCESSORIES = [
-  { key: "none", name: "None", minLevel: 1 },
-  { key: "pacifier", name: "Pacifier", minLevel: 3 },
-  { key: "shades", name: "Shades", minLevel: 4 },
-  { key: "clownnose", name: "Clown Nose", minLevel: 5 },
-  { key: "bowtie", name: "Bow Tie", minLevel: 6 },
-  { key: "eyepatch", name: "Eye Patch", minLevel: 7 },
-  { key: "skimask", name: "Ski Mask", minLevel: 8 },
-  { key: "crown", name: "Flower Crown", minLevel: 9 },
-  { key: "goggles", name: "Goggles", minLevel: 10 },
-  { key: "roundglasses", name: "Round Glasses", minLevel: 11 },
-  { key: "catglasses", name: "Cat-Eye Glasses", minLevel: 12 },
-  { key: "monocle", name: "Monocle", minLevel: 13 },
-  { key: "mustache", name: "Mustache", minLevel: 14 },
-  { key: "tophat", name: "Top Hat", minLevel: 15 },
+  { key: "none", name: "None", unlock: atLevel(1) },
+  { key: "pacifier", name: "Pacifier", unlock: atLevel(3) },
+  { key: "shades", name: "Shades", unlock: atLevel(4) },
+  { key: "clownnose", name: "Clown Nose", unlock: atLevel(5) },
+  { key: "bowtie", name: "Bow Tie", unlock: atLevel(6) },
+  { key: "eyepatch", name: "Eye Patch", unlock: atLevel(7) },
+  { key: "skimask", name: "Ski Mask", unlock: atLevel(8) },
+  { key: "crown", name: "Flower Crown", unlock: atLevel(9) },
+  { key: "goggles", name: "Goggles", unlock: atLevel(10) },
+  { key: "roundglasses", name: "Round Glasses", unlock: atLevel(11) },
+  { key: "catglasses", name: "Cat-Eye Glasses", unlock: atLevel(12) },
+  { key: "monocle", name: "Monocle", unlock: atLevel(13) },
+  { key: "mustache", name: "Mustache", unlock: atLevel(14) },
+  { key: "tophat", name: "Top Hat", unlock: atLevel(15) },
+  {
+    key: "namebadge",
+    name: "Hi, My Name Is...",
+    unlock: { type: "event", event: "firstMarkClean", label: "Unlocks the first time you mark a day clean" },
+  },
 ];
 
+// Sakura Garden and Green Knoll (both added 2026-08-30, per Eric) are the
+// same idea as the badge above, applied to backgrounds: unlocked by doing
+// the thing, not by leveling.
 const BACKGROUNDS = [
-  { key: "none", name: "None", minLevel: 1 },
-  { key: "sunrise", name: "Sunrise", minLevel: 3 },
-  { key: "meadow", name: "Meadow", minLevel: 5 },
-  { key: "stars", name: "Starry Night", minLevel: 7 },
-  { key: "aurora", name: "Aurora", minLevel: 10 },
+  { key: "none", name: "None", unlock: atLevel(1) },
+  { key: "sunrise", name: "Sunrise", unlock: atLevel(3) },
+  { key: "meadow", name: "Meadow", unlock: atLevel(5) },
+  { key: "stars", name: "Starry Night", unlock: atLevel(7) },
+  { key: "aurora", name: "Aurora", unlock: atLevel(10) },
+  {
+    key: "sakuragarden",
+    name: "Sakura Garden",
+    unlock: { type: "event", event: "firstJournal", label: "Unlocks on your first journal entry" },
+  },
+  {
+    key: "greenknoll",
+    name: "Green Knoll",
+    unlock: { type: "event", event: "firstPledge", label: "Unlocks on your first pledge" },
+  },
 ];
 
 function isUnlocked(item, level) {
-  return level >= item.minLevel;
+  if (item.unlock.type === "event") return !!data.eventUnlocks[item.unlock.event];
+  return level >= item.unlock.minLevel;
+}
+
+// Which ACCESSORIES/BACKGROUNDS items just became newly unlocked by a level
+// change from beforeLevel to afterLevel -- event-unlocked items are handled
+// separately at their own trigger point (see handlePledge() etc.), since
+// they have nothing to do with level.
+function collectNewlyUnlockedLevelItems(beforeLevel, afterLevel) {
+  const found = [];
+  ACCESSORIES.forEach((item) => {
+    if (item.unlock.type === "level" && item.unlock.minLevel > beforeLevel && item.unlock.minLevel <= afterLevel) {
+      found.push({ key: item.key, name: item.name, kind: "accessory" });
+    }
+  });
+  BACKGROUNDS.forEach((item) => {
+    if (item.unlock.type === "level" && item.unlock.minLevel > beforeLevel && item.unlock.minLevel <= afterLevel) {
+      found.push({ key: item.key, name: item.name, kind: "background" });
+    }
+  });
+  return found;
 }
 
 function isEveningUnlocked() {
@@ -430,6 +519,14 @@ function processPastCleanDays() {
 
 let calYear, calMonth; // 0-indexed month, currently displayed
 
+// Queue of {key, name, kind: "accessory"|"background"} items waiting to
+// show the "New unlock!" modal, one at a time, so an action that unlocks
+// more than one thing at once never stacks modals. openJournalAfterUnlocks
+// defers the "Add a journal entry" flow (from the fanfare modal) until the
+// queue drains, so that modal and this one never overlap either.
+let pendingUnlockAnnouncements = [];
+let openJournalAfterUnlocks = false;
+
 function init() {
   const t = strToDate(todayStr());
   calYear = t.getFullYear();
@@ -438,6 +535,7 @@ function init() {
   applyLaunchXpReset();
   processPastCleanDays();
   enforceHatchDateInvariant();
+  applyEventUnlockBackfill();
   wireEvents();
   registerServiceWorker();
   initOneSignal();
@@ -688,6 +786,46 @@ function backgroundSvg(key) {
   if (key === "aurora") {
     return `<circle cx="60" cy="60" r="54" fill="var(--teal-100)" opacity="0.5"/><path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/><path d="M6 60 Q60 32 114 60" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>`;
   }
+  // Cozy neo-Tokyo zen garden: pale sky, a raked-sand ground plane, a torii
+  // silhouette off to one side, and a cherry tree shedding petals. Sakura
+  // pink is hardcoded (not a theme var) on purpose, same reasoning as
+  // clownnose's red -- blossoms shouldn't shift color with dark mode.
+  if (key === "sakuragarden") {
+    return `<rect x="0" y="0" width="120" height="120" fill="var(--teal-100)" opacity="0.35"/>
+      <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="var(--card-bg)" opacity="0.55"/>
+      <path d="M8 98 Q60 92 112 98" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 105 Q60 99 112 105" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 112 Q60 106 112 112" stroke="var(--border)" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <g opacity="0.85">
+        <rect x="12" y="30" width="3" height="34" fill="#a0453c"/>
+        <rect x="27" y="30" width="3" height="34" fill="#a0453c"/>
+        <rect x="9" y="30" width="24" height="4" fill="#a0453c"/>
+        <rect x="7" y="22" width="28" height="4.5" rx="1" fill="#a0453c"/>
+      </g>
+      <ellipse cx="94" cy="46" rx="4" ry="22" fill="#6b4a3a"/>
+      <circle cx="90" cy="26" r="13" fill="#f3c9d6"/>
+      <circle cx="101" cy="32" r="10" fill="#e88fae"/>
+      <circle cx="88" cy="37" r="9" fill="#e88fae"/>
+      <g fill="#f3c9d6" opacity="0.9">
+        <circle cx="40" cy="20" r="2"/>
+        <circle cx="60" cy="14" r="1.6"/>
+        <circle cx="72" cy="64" r="2"/>
+        <circle cx="20" cy="52" r="1.6"/>
+      </g>`;
+  }
+  // Simple sunny knoll: sky wash, a sun, two rolling green rises, a winding
+  // path through them, and a small round tree off to the side.
+  if (key === "greenknoll") {
+    return `<rect x="0" y="0" width="120" height="120" fill="var(--amber-100)" opacity="0.3"/>
+      <circle cx="94" cy="20" r="12" fill="var(--amber-500)" opacity="0.55"/>
+      <path d="M0 84 Q30 68 60 82 T120 80 L120 120 L0 120 Z" fill="var(--teal-100)"/>
+      <path d="M0 96 Q35 84 60 96 T120 94 L120 120 L0 120 Z" fill="var(--teal-500)" opacity="0.28"/>
+      <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#e9dcb0" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
+      <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#cdbb86" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
+      <ellipse cx="20" cy="86" rx="3.5" ry="16" fill="#6b4a3a"/>
+      <circle cx="16" cy="74" r="10" fill="var(--teal-700)" opacity="0.7"/>
+      <circle cx="26" cy="78" r="8" fill="var(--teal-700)" opacity="0.7"/>`;
+  }
   return ""; // none
 }
 
@@ -733,6 +871,19 @@ function accessorySvg(key) {
   }
   if (key === "tophat") {
     return `<rect x="46" y="20" width="28" height="20" rx="2" fill="var(--ink)"/><rect x="39" y="38" width="42" height="6" rx="2" fill="var(--ink)"/><rect x="46" y="33" width="28" height="4" fill="var(--amber-500)"/>`;
+  }
+  // "Hi, My Name Is..." meeting-style sticker badge, sitting low and just
+  // left of center -- roughly where a breast pocket would be on the body
+  // ellipse below the face. Hardcoded cream + red like clownnose above,
+  // since a badge sticker shouldn't recolor with the theme.
+  if (key === "namebadge") {
+    return `<g>
+      <rect x="38" y="80" width="26" height="17" rx="1.5" fill="#fdf6ea" stroke="#d8c9a3" stroke-width="1"/>
+      <text x="51" y="87" text-anchor="middle" font-size="6" font-weight="800" fill="#d64b3a">HI</text>
+      <text x="51" y="92.5" text-anchor="middle" font-size="3.1" font-weight="600" fill="#7a6f56">MY NAME IS</text>
+      <line x1="42" y1="95" x2="60" y2="95" stroke="#d64b3a" stroke-width="1"/>
+      <circle cx="51" cy="80" r="1.3" fill="#b7b0a0"/>
+    </g>`;
   }
   return ""; // none
 }
@@ -819,11 +970,12 @@ function renderPetUnlockGrid(kind) {
       ? petSvg(stage.key, item.key, data.equippedBackground)
       : petSvg(stage.key, data.equippedAccessory, item.key);
     const displayName = unlocked ? item.name : "???";
+    const lockedHint = item.unlock.type === "level" ? `Unlocks at level ${item.unlock.minLevel}` : item.unlock.label;
 
     tile.innerHTML = `
       <div class="pet-unlock-preview">${previewArt}</div>
       <span class="pet-unlock-name">${displayName}</span>
-      <span class="pet-unlock-sub">${unlocked ? (equippedKey === item.key ? "Equipped" : "") : `Unlocks at level ${item.minLevel}`}</span>
+      <span class="pet-unlock-sub">${unlocked ? (equippedKey === item.key ? "Equipped" : "") : lockedHint}</span>
     `;
     if (unlocked) {
       tile.addEventListener("click", () => equipItem(kind, item.key));
@@ -909,10 +1061,19 @@ function handlePledge() {
   if (isEveningUnlocked() || todayPledged() || todayIsSlip()) return;
   const today = todayStr();
   data.pledgedDays.push(today);
+  const beforeLevel = xpProgress().level;
   const result = awardXp(XP_PLEDGE);
+  const newlyUnlocked = collectNewlyUnlockedLevelItems(beforeLevel, result.newLevel);
+  // Green Knoll unlocks the moment a pledge happens for the first time ever,
+  // independent of level -- see the "unlock" descriptor on BACKGROUNDS above.
+  if (!data.eventUnlocks.firstPledge) {
+    data.eventUnlocks.firstPledge = true;
+    newlyUnlocked.push({ key: "greenknoll", name: "Green Knoll", kind: "background" });
+  }
   saveData();
   renderCleanDayButton();
   renderPet();
+  queueUnlockAnnouncements(newlyUnlocked);
   openFanfareModal(result, "pledge");
 }
 
@@ -920,11 +1081,20 @@ function handleMarkCleanDay() {
   if (!isEveningUnlocked() || todayConfirmed() || todayIsSlip()) return;
   const today = todayStr();
   data.confirmedDays.push(today);
+  const beforeLevel = xpProgress().level;
   const result = awardXp(XP_CLEAN_DAY);
+  const newlyUnlocked = collectNewlyUnlockedLevelItems(beforeLevel, result.newLevel);
+  // "Hi, My Name Is..." unlocks the first time a day is ever marked clean,
+  // independent of level -- see the "unlock" descriptor on ACCESSORIES above.
+  if (!data.eventUnlocks.firstMarkClean) {
+    data.eventUnlocks.firstMarkClean = true;
+    newlyUnlocked.push({ key: "namebadge", name: "Hi, My Name Is...", kind: "accessory" });
+  }
   saveData();
   renderCleanDayButton();
   renderPet();
   renderCalendar();
+  queueUnlockAnnouncements(newlyUnlocked);
   openFanfareModal(result, "clean");
 }
 
@@ -966,6 +1136,59 @@ function openFanfareModal(result, kind) {
 
 function closeFanfareModal() {
   document.getElementById("fanfareModal").classList.add("hidden");
+  // Any unlock earned by the same action waits behind the fanfare modal,
+  // never on top of it -- surface it now that the fanfare modal is gone.
+  showNextUnlockAnnouncement();
+}
+
+/* ---------- unlock announcement modal ---------- */
+
+// Queues one or more newly-unlocked items to be announced, one at a time,
+// via showNextUnlockAnnouncement(). Only ever called from a live user
+// action (handlePledge, handleMarkCleanDay, the journal-save handler) --
+// the silent history backfill in applyEventUnlockBackfill() never calls
+// this, per the rule that only in-the-moment actions get a celebratory
+// popup.
+function queueUnlockAnnouncements(items) {
+  if (!items || items.length === 0) return;
+  pendingUnlockAnnouncements.push(...items);
+}
+
+// Pops the next queued unlock and shows it. Called once when the fanfare
+// modal closes, and again each time the unlock modal itself is dismissed,
+// to drain the rest of the queue. Once the queue is empty, resumes the
+// deferred "add a journal entry" flow if one was waiting on it.
+function showNextUnlockAnnouncement() {
+  if (pendingUnlockAnnouncements.length === 0) {
+    if (openJournalAfterUnlocks) {
+      openJournalAfterUnlocks = false;
+      openDayModal(todayStr());
+    }
+    return;
+  }
+  const item = pendingUnlockAnnouncements.shift();
+  renderUnlockModal(item);
+  document.getElementById("unlockModal").classList.remove("hidden");
+}
+
+function renderUnlockModal(item) {
+  const { level } = xpProgress();
+  const stage = petStageForLevel(level);
+  // Same "show it against whatever's currently equipped in the other slot"
+  // approach as the unlock grid, so the preview looks like how it'll
+  // actually sit on the pet once equipped.
+  const preview = item.kind === "accessory"
+    ? petSvg(stage.key, item.key, data.equippedBackground)
+    : petSvg(stage.key, data.equippedAccessory, item.key);
+  document.getElementById("unlockPreview").innerHTML = preview;
+  document.getElementById("unlockName").textContent = item.name;
+  document.getElementById("unlockKindLabel").textContent =
+    item.kind === "accessory" ? "New accessory unlocked" : "New background unlocked";
+}
+
+function handleUnlockGotIt() {
+  document.getElementById("unlockModal").classList.add("hidden");
+  showNextUnlockAnnouncement();
 }
 
 /* ---------- modals ---------- */
@@ -1038,8 +1261,23 @@ function wireEvents() {
   });
   document.getElementById("fanfareNotNowBtn").addEventListener("click", closeFanfareModal);
   document.getElementById("fanfareJournalBtn").addEventListener("click", () => {
-    closeFanfareModal();
-    openDayModal(todayStr());
+    // If this same action also unlocked something, let the unlock modal(s)
+    // show first and open the journal entry once the queue drains -- see
+    // showNextUnlockAnnouncement(). Otherwise open it right away, same as
+    // before.
+    if (pendingUnlockAnnouncements.length > 0) {
+      openJournalAfterUnlocks = true;
+      closeFanfareModal();
+    } else {
+      closeFanfareModal();
+      openDayModal(todayStr());
+    }
+  });
+
+  // Unlock announcement modal
+  document.getElementById("unlockGotItBtn").addEventListener("click", handleUnlockGotIt);
+  document.getElementById("unlockModal").addEventListener("click", (e) => {
+    if (e.target.id === "unlockModal") handleUnlockGotIt();
   });
 
   // Pet card / pet detail modal
@@ -1091,15 +1329,26 @@ function wireEvents() {
     // time a non-empty note lands on that date -- editing it later doesn't
     // pay out again.
     let leveledResult = null;
+    let newlyUnlocked = [];
     if (note && !data.journalXpDates.includes(dateStr)) {
+      const beforeLevel = xpProgress().level;
       data.journalXpDates.push(dateStr);
       leveledResult = awardXp(XP_JOURNAL_ENTRY);
+      newlyUnlocked = collectNewlyUnlockedLevelItems(beforeLevel, leveledResult.newLevel);
+      // Sakura Garden unlocks the moment a journal entry is ever written,
+      // independent of level -- see the "unlock" descriptor on BACKGROUNDS.
+      if (!data.eventUnlocks.firstJournal) {
+        data.eventUnlocks.firstJournal = true;
+        newlyUnlocked.push({ key: "sakuragarden", name: "Sakura Garden", kind: "background" });
+      }
     }
     saveData();
     closeDayModal();
     renderCalendar();
     renderPet();
+    queueUnlockAnnouncements(newlyUnlocked);
     if (leveledResult) openFanfareModal(leveledResult, "journal");
+    else showNextUnlockAnnouncement();
   });
 
   // Slip modal
@@ -1191,6 +1440,7 @@ function importBackup(e) {
         petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
         equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
         equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
+        eventUnlocks: parseEventUnlocks(parsed.eventUnlocks),
       };
       saveData();
       closeSettingsModal();
