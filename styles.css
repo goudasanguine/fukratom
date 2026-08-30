@@ -427,11 +427,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   overflow: hidden;
 }
 
-/* Full-bleed backdrop -- cropped to cover (not letterboxed), since it's
-   abstract scenery (sky/hills/stars) that reads fine cropped. */
+/* Backdrop -- cropped to cover, but only within a bounded 4:5 box (not the
+   full, much-taller phone screen) so the crop stays mild instead of zooming
+   the square 120x120 art in ~6x to cover an extreme portrait aspect ratio,
+   which was cutting off most of the scenery's detail (flagged 2026-08-31,
+   per Eric: "the backgrounds are a bit too zoomed in"). Anchored to the top
+   and faded out at the bottom edge (mask-image) into the stage's own flat
+   background color, so the crop reads as a deliberate framed/vignetted photo
+   rather than an abrupt cutoff -- the area behind the bottom info panel was
+   never meant to show background detail anyway. */
 .pet-stage-bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
 }
 .pet-stage-bg svg {
   width: 100%;
