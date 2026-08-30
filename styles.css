@@ -14,6 +14,17 @@
      pet's teal body in both light and dark mode, so it's not tied to --ink
      (which flips to a light color in dark mode). */
   --tattoo: #2c3a36;
+  /* Fixed (never overridden) pet-art tokens, added 2026-08-30 per Eric --
+     the pet's face and its equippable accessories/backgrounds are meant to
+     look the same day or night, not shift with the site's light/dark theme
+     (that was the bug behind the mouth going white in dark mode -- it was
+     drawn with var(--ink), which flips to a near-white color there). Reuse
+     these two everywhere a pet-art shape needs "dark like ink" or "light
+     like paper" without actually being tied to the theme. This also leaves
+     room for future backgrounds that are deliberately day- or night-themed
+     (baked that way on purpose), separate from the site's own dark mode. */
+  --pet-ink: #1d2624;
+  --pet-light: #fdf6ea;
   --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 1px 3px rgba(16, 40, 36, 0.06), 0 8px 24px rgba(16, 40, 36, 0.05);
