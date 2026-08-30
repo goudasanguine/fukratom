@@ -943,9 +943,10 @@ function renderPet() {
   document.getElementById("petXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
 }
 
-/* ---------- pet detail modal (name, birthdate, accessory/background unlocks) ---------- */
+/* ---------- pet full-screen stage + accessory/background picker ---------- */
 
 function openPetModal() {
+  document.getElementById("petPickerModal").classList.add("hidden");
   renderPetModal();
   document.getElementById("petModal").classList.remove("hidden");
 }
@@ -958,7 +959,14 @@ function renderPetModal() {
   const { level, intoLevel, neededForNext, pct } = xpProgress();
   const stage = petStageForLevel(level);
 
-  document.getElementById("petModalArt").innerHTML = petSvg(stage.key, data.equippedAccessory, data.equippedBackground);
+  // Backdrop and creature are rendered as two separate layers here (unlike
+  // the small pet-card icon, which still uses the single composited
+  // petSvg()) so the backdrop can crop to fill the full-screen stage edge to
+  // edge while the creature itself stays undistorted and fully visible,
+  // centered on top of it.
+  document.getElementById("petModalBg").innerHTML =
+    `<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${backgroundSvg(data.equippedBackground)}</svg>`;
+  document.getElementById("petModalArt").innerHTML = petSvg(stage.key, data.equippedAccessory, "none");
 
   const nameInput = document.getElementById("petNameInput");
   if (document.activeElement !== nameInput) {
@@ -974,16 +982,24 @@ function renderPetModal() {
   document.getElementById("petModalBirthdate").textContent = data.petBirthdate
     ? `Hatched ${formatPretty(data.petBirthdate)}`
     : "Still in the egg — hatches at level 3";
+}
 
-  renderPetUnlockGrid("accessory");
-  renderPetUnlockGrid("background");
+function openPetPicker(kind) {
+  document.getElementById("petPickerTitle").textContent = kind === "accessory" ? "Accessories" : "Backgrounds";
+  renderPetUnlockGrid(kind);
+  document.querySelector(".pet-picker-scroll").scrollTop = 0;
+  document.getElementById("petPickerModal").classList.remove("hidden");
+}
+
+function closePetPicker() {
+  document.getElementById("petPickerModal").classList.add("hidden");
 }
 
 function renderPetUnlockGrid(kind) {
   const isAccessory = kind === "accessory";
   const items = isAccessory ? ACCESSORIES : BACKGROUNDS;
   const equippedKey = isAccessory ? data.equippedAccessory : data.equippedBackground;
-  const container = document.getElementById(isAccessory ? "petAccessoryGrid" : "petBackgroundGrid");
+  const container = document.getElementById("petPickerGrid");
   const { level } = xpProgress();
   const stage = petStageForLevel(level);
 
@@ -1035,6 +1051,7 @@ function equipItem(kind, key) {
   saveData();
   renderPet();
   renderPetModal();
+  renderPetUnlockGrid(kind);
 }
 
 function savePetName() {
@@ -1329,6 +1346,9 @@ function wireEvents() {
   });
   document.getElementById("petNameInput").addEventListener("change", savePetName);
   document.getElementById("petNameInput").addEventListener("blur", savePetName);
+  document.getElementById("openAccessoryPickerBtn").addEventListener("click", () => openPetPicker("accessory"));
+  document.getElementById("openBackgroundPickerBtn").addEventListener("click", () => openPetPicker("background"));
+  document.getElementById("petPickerBack").addEventListener("click", closePetPicker);
 
   document.getElementById("prevMonth").addEventListener("click", () => {
     calMonth--;
