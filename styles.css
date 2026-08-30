@@ -10,7 +10,7 @@
   --bg: #f6f9f8;
   --card-bg: #ffffff;
   --border: #e2e8e6;
-  --radius: 16px;
+  /* Fixed ink color for the pet's face-tattoo marks -- stays dark on the     pet's teal body in both light and dark mode, so it's not tied to --ink     (which flips to a light color in dark mode). */  --tattoo: #2c3a36;  --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 1px 3px rgba(16, 40, 36, 0.06), 0 8px 24px rgba(16, 40, 36, 0.05);
   /* Text color for anything sitting on a --teal-100-tinted background (quiet
