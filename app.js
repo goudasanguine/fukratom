@@ -852,6 +852,103 @@ function backgroundSvg(key) {
   return ""; // none
 }
 
+// Same six backgrounds as backgroundSvg() above, redrawn for a taller
+// 120x240 canvas instead of the square 120x120 -- used only for the
+// full-screen pet stage backdrop (added 2026-08-31, per Eric: "design the
+// backgrounds better to properly fill a vertically oriented phone screen").
+// The square art forced to cover a real phone's aspect ratio needed a ~6x
+// crop (too zoomed in, per Eric's first pass of feedback); bounding that
+// crop to stay mild instead left a visible gap at the bottom (per his
+// second pass) since the square art simply didn't reach that far. Redrawing
+// each background against a canvas close to an actual phone's own aspect
+// ratio (120x240 is close to a typical ~9:19.5 phone screen) is the real
+// fix -- it needs only a mild crop to cover edge-to-edge, so this is a
+// separate function/canvas rather than a CSS-only tweak. Every case starts
+// with a full-canvas base wash specifically so there's never a transparent
+// gap, whatever the composition on top of it; "none" is left to fall
+// through to the pet stage's own flat `--bg`, same as the square version.
+function backgroundSvgTall(key) {
+  if (key === "sunrise") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6ea"/>
+      <circle cx="60" cy="74" r="58" fill="#fbecd3" opacity="0.7"/>
+      <path d="M0 156 Q60 128 120 156 L120 240 L0 240 Z" fill="#e3f4f1" opacity="0.85"/>
+      <path d="M0 184 Q60 164 120 184 L120 240 L0 240 Z" fill="#e3f4f1" opacity="0.6"/>`;
+  }
+  if (key === "meadow") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#f6f9f8"/>
+      <path d="M0 156 Q30 136 60 156 T120 156 L120 240 L0 240 Z" fill="#e3f4f1"/>
+      <path d="M0 182 Q30 166 60 182 T120 182 L120 240 L0 240 Z" fill="#dcece8"/>
+      <circle cx="20" cy="164" r="3" fill="var(--amber-500)"/>
+      <circle cx="100" cy="168" r="3" fill="var(--amber-500)"/>
+      <circle cx="36" cy="176" r="2.2" fill="var(--teal-700)"/>
+      <circle cx="88" cy="180" r="2.2" fill="var(--teal-700)"/>
+      <circle cx="55" cy="203" r="2.6" fill="var(--amber-500)"/>
+      <circle cx="72" cy="213" r="2" fill="var(--teal-700)"/>`;
+  }
+  if (key === "stars") {
+    return `<rect x="0" y="0" width="120" height="240" fill="var(--teal-900)" opacity="0.16"/>
+      <circle cx="18" cy="22" r="1.7" fill="var(--amber-500)"/>
+      <circle cx="100" cy="18" r="1.4" fill="var(--amber-500)"/>
+      <circle cx="30" cy="102" r="1.4" fill="var(--amber-500)"/>
+      <circle cx="106" cy="96" r="1.7" fill="var(--amber-500)"/>
+      <circle cx="12" cy="70" r="1.3" fill="var(--amber-500)"/>
+      <circle cx="92" cy="144" r="1.5" fill="var(--amber-500)"/>
+      <circle cx="24" cy="174" r="1.3" fill="var(--amber-500)"/>
+      <circle cx="70" cy="198" r="1.6" fill="var(--amber-500)"/>
+      <circle cx="108" cy="220" r="1.3" fill="var(--amber-500)"/>`;
+  }
+  if (key === "aurora") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#eef6f4"/>
+      <circle cx="60" cy="72" r="64" fill="#e3f4f1" opacity="0.5"/>
+      <path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>
+      <path d="M6 63 Q60 35 114 63" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>
+      <path d="M6 80 Q60 54 114 80" stroke="var(--amber-500)" stroke-width="2.4" fill="none" opacity="0.4" stroke-linecap="round"/>
+      <path d="M0 166 Q60 144 120 166 L120 240 L0 240 Z" fill="var(--teal-100)" opacity="0.5"/>`;
+  }
+  if (key === "sakuragarden") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#e3f4f1" opacity="0.35"/>
+      <path d="M0 156 L120 156 L120 240 L0 240 Z" fill="#ffffff" opacity="0.55"/>
+      <path d="M8 162 Q60 156 112 162" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 171 Q60 165 112 171" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 180 Q60 174 112 180" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 190 Q60 184 112 190" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <path d="M8 200 Q60 194 112 200" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+      <g opacity="0.85">
+        <rect x="12" y="57" width="3" height="34" fill="#a0453c"/>
+        <rect x="27" y="57" width="3" height="34" fill="#a0453c"/>
+        <rect x="9" y="57" width="24" height="4" fill="#a0453c"/>
+        <rect x="7" y="49" width="28" height="4.5" rx="1" fill="#a0453c"/>
+      </g>
+      <ellipse cx="94" cy="78" rx="4" ry="30" fill="#6b4a3a"/>
+      <circle cx="90" cy="48" r="15" fill="#f3c9d6"/>
+      <circle cx="103" cy="56" r="11" fill="#e88fae"/>
+      <circle cx="87" cy="62" r="10" fill="#e88fae"/>
+      <g fill="#f3c9d6" opacity="0.9">
+        <circle cx="40" cy="37" r="2"/>
+        <circle cx="60" cy="28" r="1.6"/>
+        <circle cx="72" cy="92" r="2"/>
+        <circle cx="20" cy="74" r="1.6"/>
+        <circle cx="50" cy="146" r="1.8"/>
+        <circle cx="85" cy="167" r="1.5"/>
+      </g>`;
+  }
+  // Simple sunny knoll: sky wash, a sun, three rolling green rises, a
+  // winding path through them, and a small round tree off to the side.
+  if (key === "greenknoll") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#fbecd3" opacity="0.3"/>
+      <circle cx="94" cy="36" r="14" fill="var(--amber-500)" opacity="0.55"/>
+      <path d="M0 144 Q30 122 60 142 T120 138 L120 240 L0 240 Z" fill="#e3f4f1"/>
+      <path d="M0 170 Q35 154 60 170 T120 167 L120 240 L0 240 Z" fill="var(--teal-500)" opacity="0.28"/>
+      <path d="M0 200 Q35 186 60 200 T120 197 L120 240 L0 240 Z" fill="var(--teal-700)" opacity="0.16"/>
+      <path d="M80 144 Q66 160 76 174 Q84 186 70 204 Q60 216 68 240" fill="none" stroke="#e9dcb0" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
+      <path d="M80 144 Q66 160 76 174 Q84 186 70 204 Q60 216 68 240" fill="none" stroke="#cdbb86" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
+      <ellipse cx="20" cy="150" rx="3.5" ry="18" fill="#6b4a3a"/>
+      <circle cx="16" cy="136" r="11" fill="var(--teal-700)" opacity="0.7"/>
+      <circle cx="27" cy="141" r="9" fill="var(--teal-700)" opacity="0.7"/>`;
+  }
+  return ""; // none -- lets the pet stage's own flat --bg show through
+}
+
 // Accessory art, drawn last so it sits on top of the creature (shades,
 // goggles, etc. in particular need to cover the plain eye circles beneath
 // them). Deliberately flat colors -- see the no-gradients note above.
@@ -963,9 +1060,12 @@ function renderPetModal() {
   // the small pet-card icon, which still uses the single composited
   // petSvg()) so the backdrop can crop to fill the full-screen stage edge to
   // edge while the creature itself stays undistorted and fully visible,
-  // centered on top of it.
+  // centered on top of it. The backdrop uses backgroundSvgTall()'s taller
+  // 120x240 canvas (not backgroundSvg()'s square 120x120) so covering an
+  // actual phone screen only needs a mild crop -- see backgroundSvgTall()'s
+  // own comment for why a second, taller-canvas art set exists at all.
   document.getElementById("petModalBg").innerHTML =
-    `<svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${backgroundSvg(data.equippedBackground)}</svg>`;
+    `<svg viewBox="0 0 120 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${backgroundSvgTall(data.equippedBackground)}</svg>`;
   document.getElementById("petModalArt").innerHTML = petSvg(stage.key, data.equippedAccessory, "none");
 
   const nameInput = document.getElementById("petNameInput");
