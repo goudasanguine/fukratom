@@ -65,6 +65,14 @@ function defaultData() {
     },
     relapses: [],
     notes: {},
+    xp: 0,
+    // Dates Shawn has actively tapped "Mark today clean" on -- separate from
+    // the passive/forgiving auto-counted streak. Purely a bonus ritual: XP
+    // and fanfare, never required and never clawed back.
+    confirmedDays: [],
+    // Dates that have already earned the journal-entry XP bonus, so editing
+    // a note twice in one day doesn't double-pay it.
+    journalXpDates: [],
   };
 }
 
@@ -81,6 +89,9 @@ function loadData() {
       settings: Object.assign({}, base.settings, parsed.settings || {}),
       relapses: Array.isArray(parsed.relapses) ? parsed.relapses.slice().sort() : [],
       notes: parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
+      xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
+      confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
+      journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
     };
   } catch (e) {
     console.error("Failed to load data, starting fresh.", e);
@@ -90,6 +101,8 @@ function loadData() {
 
 function saveData() {
   data.relapses = Array.from(new Set(data.relapses)).sort();
+  data.confirmedDays = Array.from(new Set(data.confirmedDays)).sort();
+  data.journalXpDates = Array.from(new Set(data.journalXpDates)).sort();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -118,7 +131,10 @@ function currentStreakDays() {
   const start = currentStreakStart();
   const today = todayStr();
   if (start > today) return 0;
-  return daysBetween(start, today) + 1;
+  // Today doesn't count as a completed clear day until it's actually over --
+  // so this is "full days elapsed since start," not an inclusive day count.
+  // It advances on its own at midnight since today's date just moves forward.
+  return daysBetween(start, today);
 }
 
 function longestStreakDays() {
@@ -134,7 +150,8 @@ function longestStreakDays() {
     prevEnd = addDays(relapse, 1);
   }
   if (prevEnd <= today) {
-    longest = Math.max(longest, daysBetween(prevEnd, today) + 1);
+    // Same "today isn't banked until it's over" rule as currentStreakDays().
+    longest = Math.max(longest, daysBetween(prevEnd, today));
   }
   return longest;
 }
@@ -153,6 +170,78 @@ function totalClearDays() {
 function moneySaved() {
   const dailyCost = Number(data.settings.dailyCost) || 0;
   return Math.round(totalClearDays() * dailyCost);
+}
+
+/* ---------- XP, leveling, and the pet companion ----------
+   Tunable knobs -- easy to rebalance later without touching the logic below. */
+
+const XP_CLEAN_DAY = 15; // tapping "Mark today clean" after 8pm
+const XP_JOURNAL_ENTRY = 5; // writing a journal note, once per calendar day
+
+// Cumulative XP required to REACH a given level (level 1 starts at 0 XP).
+// Grows quadratically so early levels come fast and later ones take longer --
+// level 2 at 50xp, level 3 at 150, level 4 at 300, level 5 at 500, etc.
+function xpForLevel(level) {
+  return 25 * level * (level - 1);
+}
+
+function levelForXp(xp) {
+  let level = 1;
+  while (xpForLevel(level + 1) <= xp) level++;
+  return level;
+}
+
+function xpProgress() {
+  const xp = data.xp || 0;
+  const level = levelForXp(xp);
+  const floor = xpForLevel(level);
+  const ceil = xpForLevel(level + 1);
+  const span = ceil - floor;
+  return {
+    level,
+    xp,
+    intoLevel: xp - floor,
+    neededForNext: span,
+    pct: span > 0 ? Math.min(100, Math.round(((xp - floor) / span) * 100)) : 100,
+  };
+}
+
+function awardXp(amount) {
+  const before = levelForXp(data.xp || 0);
+  data.xp = (data.xp || 0) + amount;
+  const after = levelForXp(data.xp);
+  return { gained: amount, leveledUp: after > before, newLevel: after };
+}
+
+// The pet's look evolves in a handful of discrete stages as Shawn (and the
+// pet) level up. Each stage is its own hand-drawn inline SVG so there's no
+// external art dependency -- see petSvg() below.
+const PET_STAGES = [
+  { minLevel: 1, key: "egg", name: "Egg" },
+  { minLevel: 3, key: "hatchling", name: "Hatchling" },
+  { minLevel: 5, key: "sprout", name: "Sprout" },
+  { minLevel: 8, key: "adventurer", name: "Adventurer" },
+  { minLevel: 12, key: "guardian", name: "Guardian" },
+];
+
+function petStageForLevel(level) {
+  let stage = PET_STAGES[0];
+  for (const s of PET_STAGES) {
+    if (level >= s.minLevel) stage = s;
+  }
+  return stage;
+}
+
+function isEveningUnlocked() {
+  return new Date().getHours() >= 20; // Shawn's phone's local time, no timezone math needed
+}
+
+function todayConfirmed() {
+  return data.confirmedDays.includes(todayStr());
+}
+
+function todayIsSlip() {
+  return data.relapses.includes(todayStr());
 }
 
 /* ---------- rendering ---------- */
@@ -178,6 +267,8 @@ function renderAll() {
 
   renderHeader();
   renderHero();
+  renderPet();
+  renderCleanDayButton();
   renderMoney();
   renderStats();
   renderMilestones();
@@ -291,8 +382,146 @@ function renderCalendar() {
       cell.addEventListener("click", () => openDayModal(dateStr));
     }
 
+    if (data.confirmedDays.includes(dateStr)) {
+      const star = document.createElement("span");
+      star.className = "confirmed-star";
+      star.textContent = "★";
+      cell.appendChild(star);
+    }
+
     grid.appendChild(cell);
   }
+}
+
+/* ---------- pet companion ---------- */
+
+// Rounded, friendly, hand-drawn-in-code creature. Every stage shares the
+// same teal/amber palette as the rest of the app; later stages add more
+// detail (limbs, ears, a scarf, a glow) rather than becoming a different
+// creature, so it reads as one companion growing up.
+function petSvg(stageKey) {
+  const body = `<ellipse cx="60" cy="70" rx="34" ry="30" fill="var(--teal-500)"/>`;
+  const eyes = `<circle cx="49" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="71" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="49" cy="64" r="2.2" fill="var(--ink)"/><circle cx="71" cy="64" r="2.2" fill="var(--ink)"/>`;
+  const smile = `<path d="M52 76 Q60 82 68 76" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+
+  if (stageKey === "egg") {
+    return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Egg">
+      <ellipse cx="60" cy="68" rx="30" ry="38" fill="var(--amber-100)" stroke="var(--amber-500)" stroke-width="2.5"/>
+      <path d="M50 40 L58 56 L48 60 L64 82" stroke="var(--amber-500)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+  if (stageKey === "hatchling") {
+    return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Hatchling">
+      ${body}
+      <ellipse cx="30" cy="72" rx="7" ry="10" fill="var(--teal-500)"/>
+      <ellipse cx="90" cy="72" rx="7" ry="10" fill="var(--teal-500)"/>
+      ${eyes}${smile}
+    </svg>`;
+  }
+  if (stageKey === "sprout") {
+    return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Sprout">
+      <path d="M60 30 Q50 18 40 26 Q48 34 60 38 Z" fill="var(--teal-700)"/>
+      <path d="M60 30 Q70 18 80 26 Q72 34 60 38 Z" fill="var(--teal-700)"/>
+      ${body}
+      <ellipse cx="28" cy="74" rx="8" ry="11" fill="var(--teal-500)"/>
+      <ellipse cx="92" cy="74" rx="8" ry="11" fill="var(--teal-500)"/>
+      <ellipse cx="45" cy="96" rx="7" ry="9" fill="var(--teal-700)"/>
+      <ellipse cx="75" cy="96" rx="7" ry="9" fill="var(--teal-700)"/>
+      ${eyes}${smile}
+    </svg>`;
+  }
+  if (stageKey === "adventurer") {
+    return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Adventurer">
+      <path d="M60 28 Q48 14 36 24 Q46 34 60 36 Z" fill="var(--teal-700)"/>
+      <path d="M60 28 Q72 14 84 24 Q74 34 60 36 Z" fill="var(--teal-700)"/>
+      ${body}
+      <path d="M30 66 Q60 78 90 66 L86 84 Q60 92 34 84 Z" fill="var(--amber-500)"/>
+      <ellipse cx="26" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
+      <ellipse cx="94" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
+      <ellipse cx="43" cy="98" rx="7.5" ry="9" fill="var(--teal-700)"/>
+      <ellipse cx="77" cy="98" rx="7.5" ry="9" fill="var(--teal-700)"/>
+      ${eyes}${smile}
+    </svg>`;
+  }
+  // guardian -- fully evolved, small wings and a sparkle aura
+  return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Guardian">
+    <circle cx="60" cy="68" r="46" fill="var(--teal-100)" opacity="0.6"/>
+    <path d="M26 60 Q10 62 14 84 Q28 82 34 68 Z" fill="var(--teal-700)"/>
+    <path d="M94 60 Q110 62 106 84 Q92 82 86 68 Z" fill="var(--teal-700)"/>
+    <path d="M60 26 Q46 10 32 22 Q44 34 60 36 Z" fill="var(--amber-500)"/>
+    <path d="M60 26 Q74 10 88 22 Q76 34 60 36 Z" fill="var(--amber-500)"/>
+    ${body}
+    <path d="M28 66 Q60 80 92 66 L87 88 Q60 98 33 88 Z" fill="var(--amber-500)"/>
+    <ellipse cx="24" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
+    <ellipse cx="96" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
+    <ellipse cx="42" cy="99" rx="7.5" ry="9" fill="var(--teal-700)"/>
+    <ellipse cx="78" cy="99" rx="7.5" ry="9" fill="var(--teal-700)"/>
+    ${eyes}${smile}
+    <path d="M18 34 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="var(--amber-500)"/>
+    <path d="M100 44 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="var(--amber-500)"/>
+  </svg>`;
+}
+
+function renderPet() {
+  const { level, intoLevel, neededForNext, pct } = xpProgress();
+  const stage = petStageForLevel(level);
+  document.getElementById("petArt").innerHTML = petSvg(stage.key);
+  document.getElementById("petStageName").textContent = stage.name;
+  document.getElementById("petLevel").textContent = `Level ${level}`;
+  document.getElementById("petXpBarFill").style.width = `${pct}%`;
+  document.getElementById("petXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
+}
+
+function renderCleanDayButton() {
+  const btn = document.getElementById("markCleanBtn");
+  const badge = document.getElementById("todayConfirmedBadge");
+  if (!btn || !badge) return;
+
+  const hasStarted = !!data.settings.quitDate;
+  const unlocked = isEveningUnlocked();
+  const confirmed = todayConfirmed();
+  const isSlip = todayIsSlip();
+
+  if (!hasStarted || isSlip) {
+    btn.classList.add("hidden");
+    badge.classList.add("hidden");
+    return;
+  }
+
+  if (confirmed) {
+    btn.classList.add("hidden");
+    badge.classList.remove("hidden");
+  } else {
+    badge.classList.add("hidden");
+    btn.classList.remove("hidden");
+    btn.disabled = !unlocked;
+    btn.textContent = unlocked ? "Mark today clean 🌟" : "Mark today clean (unlocks at 8pm)";
+  }
+}
+
+function handleMarkCleanDay() {
+  if (!isEveningUnlocked() || todayConfirmed() || todayIsSlip()) return;
+  const today = todayStr();
+  data.confirmedDays.push(today);
+  const result = awardXp(XP_CLEAN_DAY);
+  saveData();
+  renderCleanDayButton();
+  renderPet();
+  renderCalendar();
+  openFanfareModal(result);
+}
+
+function openFanfareModal(result) {
+  document.getElementById("fanfareXpLine").textContent = `+${result.gained} XP for today`;
+  document.getElementById("fanfareLevelUp").classList.toggle("hidden", !result.leveledUp);
+  if (result.leveledUp) {
+    document.getElementById("fanfareLevelUp").textContent = `Level up! ${result.newLevel}`;
+  }
+  document.getElementById("fanfareModal").classList.remove("hidden");
+}
+
+function closeFanfareModal() {
+  document.getElementById("fanfareModal").classList.add("hidden");
 }
 
 /* ---------- modals ---------- */
@@ -355,6 +584,18 @@ function wireEvents() {
 
   document.getElementById("logSlipBtn").addEventListener("click", () => openSlipModal(todayStr()));
   document.getElementById("addNoteBtn").addEventListener("click", () => openDayModal(todayStr()));
+  document.getElementById("markCleanBtn").addEventListener("click", handleMarkCleanDay);
+
+  // Fanfare modal
+  document.getElementById("fanfareClose").addEventListener("click", closeFanfareModal);
+  document.getElementById("fanfareModal").addEventListener("click", (e) => {
+    if (e.target.id === "fanfareModal") closeFanfareModal();
+  });
+  document.getElementById("fanfareNotNowBtn").addEventListener("click", closeFanfareModal);
+  document.getElementById("fanfareJournalBtn").addEventListener("click", () => {
+    closeFanfareModal();
+    openDayModal(todayStr());
+  });
 
   document.getElementById("prevMonth").addEventListener("click", () => {
     calMonth--;
@@ -386,9 +627,19 @@ function wireEvents() {
     const note = document.getElementById("dayModalNote").value.trim();
     if (note) data.notes[dateStr] = note;
     else delete data.notes[dateStr];
+    // Journal XP is a one-time bonus per calendar day, awarded the first
+    // time a non-empty note lands on that date -- editing it later doesn't
+    // pay out again.
+    let leveledResult = null;
+    if (note && !data.journalXpDates.includes(dateStr)) {
+      data.journalXpDates.push(dateStr);
+      leveledResult = awardXp(XP_JOURNAL_ENTRY);
+    }
     saveData();
     closeDayModal();
     renderCalendar();
+    renderPet();
+    if (leveledResult) openFanfareModal(leveledResult);
   });
 
   // Slip modal
@@ -470,6 +721,9 @@ function importBackup(e) {
         settings: Object.assign({}, base.settings, parsed.settings || {}),
         relapses: Array.isArray(parsed.relapses) ? parsed.relapses.slice().sort() : [],
         notes: parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
+        xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
+        confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
+        journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
       };
       saveData();
       closeSettingsModal();
@@ -576,7 +830,13 @@ function initOneSignal() {
     await OneSignal.init({
       appId: ONESIGNAL_APP_ID,
       serviceWorkerPath: "sw.js",
-      serviceWorkerParam: { scope: "/" },
+      // Was hardcoded to "/" (site root), which is wrong for a GitHub Pages
+      // *project* site living at /fukratom/ -- sw.js actually registers with
+      // a scope of whatever folder it's served from, so this has to match
+      // that instead of assuming root. Computing it from the current page
+      // means this keeps working if the app ever moves (custom domain, a
+      // different subpath, etc).
+      serviceWorkerParam: { scope: new URL(".", location.href).pathname },
     });
     OneSignal.User.PushSubscription.addEventListener("change", updateNotifStatus);
     updateNotifStatus();
