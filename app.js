@@ -978,10 +978,15 @@ function renderPetModal() {
   document.getElementById("petModalXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
   // Only a pet that's actually hatched (level 3+) has a real hatch date --
   // see the petBirthdate comment in defaultData() / awardXp(). Still-an-egg
-  // pets get an honest "not yet" line instead of a fabricated date.
-  document.getElementById("petModalBirthdate").textContent = data.petBirthdate
-    ? `Hatched ${formatPretty(data.petBirthdate)}`
-    : "Still in the egg — hatches at level 3";
+  // pets just show nothing here (removed 2026-08-31, per Eric) rather than a
+  // "hatches at level 3" hint.
+  const petModalBirthdate = document.getElementById("petModalBirthdate");
+  if (data.petBirthdate) {
+    petModalBirthdate.textContent = `Hatched ${formatPretty(data.petBirthdate)}`;
+    petModalBirthdate.classList.remove("hidden");
+  } else {
+    petModalBirthdate.classList.add("hidden");
+  }
 }
 
 function openPetPicker(kind) {
