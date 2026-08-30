@@ -73,6 +73,14 @@ function defaultData() {
     // Dates that have already earned the journal-entry XP bonus, so editing
     // a note twice in one day doesn't double-pay it.
     journalXpDates: [],
+    // Pet customization: a nickname Shawn can optionally give it, the date it
+    // "hatched" (first time this data was ever created, shown in its detail
+    // view), plus which unlocked accessory/background are currently equipped
+    // ("none" = default).
+    petName: "",
+    petBirthdate: todayStr(),
+    equippedAccessory: "none",
+    equippedBackground: "none",
   };
 }
 
@@ -92,6 +100,10 @@ function loadData() {
       xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
       confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
       journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
+      petName: typeof parsed.petName === "string" ? parsed.petName : "",
+      petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
+      equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
+      equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
     };
   } catch (e) {
     console.error("Failed to load data, starting fresh.", e);
@@ -230,6 +242,29 @@ function petStageForLevel(level) {
     if (level >= s.minLevel) stage = s;
   }
   return stage;
+}
+
+// Cosmetic unlocks -- pure flavor, no gameplay effect. "none" is always
+// unlocked and is how Shawn un-equips a slot. Levels are staggered against
+// PET_STAGES so there's usually something new close by as he levels up.
+const ACCESSORIES = [
+  { key: "none", name: "None", minLevel: 1 },
+  { key: "bandana", name: "Bandana", minLevel: 2 },
+  { key: "shades", name: "Shades", minLevel: 4 },
+  { key: "bowtie", name: "Bow Tie", minLevel: 6 },
+  { key: "crown", name: "Flower Crown", minLevel: 9 },
+];
+
+const BACKGROUNDS = [
+  { key: "none", name: "None", minLevel: 1 },
+  { key: "sunrise", name: "Sunrise", minLevel: 3 },
+  { key: "meadow", name: "Meadow", minLevel: 5 },
+  { key: "stars", name: "Starry Night", minLevel: 7 },
+  { key: "aurora", name: "Aurora", minLevel: 10 },
+];
+
+function isUnlocked(item, level) {
+  return level >= item.minLevel;
 }
 
 function isEveningUnlocked() {
@@ -399,27 +434,49 @@ function renderCalendar() {
 // same teal/amber palette as the rest of the app; later stages add more
 // detail (limbs, ears, a scarf, a glow) rather than becoming a different
 // creature, so it reads as one companion growing up.
-function petSvg(stageKey) {
+//
+// accessoryKey / backgroundKey are cosmetic unlocks Shawn equips from the
+// pet detail view (see ACCESSORIES / BACKGROUNDS above) -- "none" (the
+// default) draws nothing extra.
+function petSvg(stageKey, accessoryKey, backgroundKey) {
+  const bg = backgroundSvg(backgroundKey || "none");
+  const acc = accessorySvg(accessoryKey || "none");
   const body = `<ellipse cx="60" cy="70" rx="34" ry="30" fill="var(--teal-500)"/>`;
   const eyes = `<circle cx="49" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="71" cy="64" r="4.5" fill="var(--card-bg)"/><circle cx="49" cy="64" r="2.2" fill="var(--ink)"/><circle cx="71" cy="64" r="2.2" fill="var(--ink)"/>`;
-  const smile = `<path d="M52 76 Q60 82 68 76" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;  /* Face tattoos matching Shawn's own -- two lines above the left eye, a triangle/circle/triangle column above the right eye, and a downward mark under the left eye. Shows on every stage once there's a face to put them on (i.e. not the egg). */  const tattoos = `<g opacity="0.88"><line x1="44" y1="46" x2="44" y2="57" stroke="var(--tattoo)" stroke-width="2.6" stroke-linecap="round"/><line x1="49" y1="46" x2="49" y2="57" stroke="var(--tattoo)" stroke-width="2.6" stroke-linecap="round"/><path d="M71.5 46 L76.5 46 L74 50.5 Z" fill="none" stroke="var(--tattoo)" stroke-width="1.3"/><path d="M74 49.5 A2.8 2.8 0 1 0 74 55.1" fill="none" stroke="var(--tattoo)" stroke-width="1.3" stroke-linecap="round"/><path d="M71.5 54 L76.5 54 L74 58 Z" fill="none" stroke="var(--tattoo)" stroke-width="1.3"/><path d="M45 70 L52 70 L48.5 77 Z" fill="var(--tattoo)"/></g>`;
+  const smile = `<path d="M52 76 Q60 82 68 76" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>`;
+  // Face tattoos matching Shawn's own -- two lines above the left eye, a
+  // triangle/circle/triangle column above the right eye, and a downward
+  // mark under the left eye. Shows on every stage once there's a face to
+  // put them on (i.e. not the egg).
+  const tattoos = `<g opacity="0.88">
+    <line x1="44" y1="46" x2="44" y2="57" stroke="var(--tattoo)" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="49" y1="46" x2="49" y2="57" stroke="var(--tattoo)" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M71.5 46 L76.5 46 L74 50.5 Z" fill="none" stroke="var(--tattoo)" stroke-width="1.3"/>
+    <path d="M74 49.5 A2.8 2.8 0 1 0 74 55.1" fill="none" stroke="var(--tattoo)" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M71.5 54 L76.5 54 L74 58 Z" fill="none" stroke="var(--tattoo)" stroke-width="1.3"/>
+    <path d="M45 70 L52 70 L48.5 77 Z" fill="var(--tattoo)"/>
+  </g>`;
 
   if (stageKey === "egg") {
     return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Egg">
+      ${bg}
       <ellipse cx="60" cy="68" rx="30" ry="38" fill="var(--amber-100)" stroke="var(--amber-500)" stroke-width="2.5"/>
       <path d="M50 40 L58 56 L48 60 L64 82" stroke="var(--amber-500)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      ${acc}
     </svg>`;
   }
   if (stageKey === "hatchling") {
     return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Hatchling">
+      ${bg}
       ${body}
       <ellipse cx="30" cy="72" rx="7" ry="10" fill="var(--teal-500)"/>
       <ellipse cx="90" cy="72" rx="7" ry="10" fill="var(--teal-500)"/>
-      ${eyes}${smile}${tattoos}
+      ${eyes}${smile}${tattoos}${acc}
     </svg>`;
   }
   if (stageKey === "sprout") {
     return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Sprout">
+      ${bg}
       <path d="M60 30 Q50 18 40 26 Q48 34 60 38 Z" fill="var(--teal-700)"/>
       <path d="M60 30 Q70 18 80 26 Q72 34 60 38 Z" fill="var(--teal-700)"/>
       ${body}
@@ -427,11 +484,12 @@ function petSvg(stageKey) {
       <ellipse cx="92" cy="74" rx="8" ry="11" fill="var(--teal-500)"/>
       <ellipse cx="45" cy="96" rx="7" ry="9" fill="var(--teal-700)"/>
       <ellipse cx="75" cy="96" rx="7" ry="9" fill="var(--teal-700)"/>
-      ${eyes}${smile}${tattoos}
+      ${eyes}${smile}${tattoos}${acc}
     </svg>`;
   }
   if (stageKey === "adventurer") {
     return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Adventurer">
+      ${bg}
       <path d="M60 28 Q48 14 36 24 Q46 34 60 36 Z" fill="var(--teal-700)"/>
       <path d="M60 28 Q72 14 84 24 Q74 34 60 36 Z" fill="var(--teal-700)"/>
       ${body}
@@ -440,11 +498,12 @@ function petSvg(stageKey) {
       <ellipse cx="94" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
       <ellipse cx="43" cy="98" rx="7.5" ry="9" fill="var(--teal-700)"/>
       <ellipse cx="77" cy="98" rx="7.5" ry="9" fill="var(--teal-700)"/>
-      ${eyes}${smile}${tattoos}
+      ${eyes}${smile}${tattoos}${acc}
     </svg>`;
   }
   // guardian -- fully evolved, small wings and a sparkle aura
   return `<svg viewBox="0 0 120 120" class="pet-svg" aria-label="Guardian">
+    ${bg}
     <circle cx="60" cy="68" r="46" fill="var(--teal-100)" opacity="0.6"/>
     <path d="M26 60 Q10 62 14 84 Q28 82 34 68 Z" fill="var(--teal-700)"/>
     <path d="M94 60 Q110 62 106 84 Q92 82 86 68 Z" fill="var(--teal-700)"/>
@@ -456,20 +515,147 @@ function petSvg(stageKey) {
     <ellipse cx="96" cy="76" rx="8" ry="11" fill="var(--teal-500)"/>
     <ellipse cx="42" cy="99" rx="7.5" ry="9" fill="var(--teal-700)"/>
     <ellipse cx="78" cy="99" rx="7.5" ry="9" fill="var(--teal-700)"/>
-    ${eyes}${smile}${tattoos}
+    ${eyes}${smile}${tattoos}${acc}
     <path d="M18 34 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="var(--amber-500)"/>
     <path d="M100 44 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="var(--amber-500)"/>
   </svg>`;
 }
 
+// Background art, drawn first so it sits behind the creature. Kept to flat
+// shapes (no gradients) since several copies of this SVG can be on screen
+// at once (home card + every option tile in the unlock grid) and duplicate
+// gradient ids across inline SVGs can misbehave.
+function backgroundSvg(key) {
+  if (key === "sunrise") {
+    return `<circle cx="60" cy="58" r="50" fill="var(--amber-100)" opacity="0.7"/><path d="M4 96 Q60 76 116 96 L116 120 L4 120 Z" fill="var(--teal-100)" opacity="0.8"/>`;
+  }
+  if (key === "meadow") {
+    return `<path d="M0 96 Q30 84 60 96 T120 96 L120 120 L0 120 Z" fill="var(--teal-100)"/><circle cx="20" cy="100" r="3" fill="var(--amber-500)"/><circle cx="100" cy="102" r="3" fill="var(--amber-500)"/><circle cx="36" cy="107" r="2.2" fill="var(--teal-700)"/><circle cx="88" cy="108" r="2.2" fill="var(--teal-700)"/>`;
+  }
+  if (key === "stars") {
+    return `<rect x="0" y="0" width="120" height="120" fill="var(--teal-900)" opacity="0.16"/><circle cx="18" cy="22" r="1.7" fill="var(--amber-500)"/><circle cx="100" cy="18" r="1.4" fill="var(--amber-500)"/><circle cx="30" cy="102" r="1.4" fill="var(--amber-500)"/><circle cx="106" cy="96" r="1.7" fill="var(--amber-500)"/><circle cx="12" cy="70" r="1.3" fill="var(--amber-500)"/>`;
+  }
+  if (key === "aurora") {
+    return `<circle cx="60" cy="60" r="54" fill="var(--teal-100)" opacity="0.5"/><path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/><path d="M6 60 Q60 32 114 60" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>`;
+  }
+  return ""; // none
+}
+
+// Accessory art, drawn last so it sits on top of the creature (shades in
+// particular need to cover the plain eye circles beneath them).
+function accessorySvg(key) {
+  if (key === "bandana") {
+    return `<path d="M36 86 Q60 100 84 86 L78 98 Q60 106 42 98 Z" fill="var(--amber-500)"/><circle cx="60" cy="94" r="2.4" fill="var(--amber-100)"/>`;
+  }
+  if (key === "shades") {
+    return `<rect x="42" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><rect x="62" y="59" width="16" height="10" rx="4" fill="var(--ink)"/><line x1="58" y1="63" x2="62" y2="63" stroke="var(--ink)" stroke-width="2"/>`;
+  }
+  if (key === "bowtie") {
+    return `<path d="M52 84 L60 88 L52 92 Z" fill="var(--amber-500)"/><path d="M68 84 L60 88 L68 92 Z" fill="var(--amber-500)"/><circle cx="60" cy="88" r="2" fill="var(--amber-100)"/>`;
+  }
+  if (key === "crown") {
+    return `<path d="M44 40 L48 30 L54 38 L60 28 L66 38 L72 30 L76 40 Z" fill="var(--amber-500)"/><circle cx="48" cy="30" r="1.8" fill="var(--teal-700)"/><circle cx="60" cy="28" r="1.8" fill="var(--teal-700)"/><circle cx="72" cy="30" r="1.8" fill="var(--teal-700)"/>`;
+  }
+  return ""; // none
+}
+
 function renderPet() {
   const { level, intoLevel, neededForNext, pct } = xpProgress();
   const stage = petStageForLevel(level);
-  document.getElementById("petArt").innerHTML = petSvg(stage.key);
+  document.getElementById("petArt").innerHTML = petSvg(stage.key, data.equippedAccessory, data.equippedBackground);
   document.getElementById("petStageName").textContent = stage.name;
   document.getElementById("petLevel").textContent = `Level ${level}`;
   document.getElementById("petXpBarFill").style.width = `${pct}%`;
   document.getElementById("petXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
+}
+
+/* ---------- pet detail modal (name, birthdate, accessory/background unlocks) ---------- */
+
+function openPetModal() {
+  renderPetModal();
+  document.getElementById("petModal").classList.remove("hidden");
+}
+
+function closePetModal() {
+  document.getElementById("petModal").classList.add("hidden");
+}
+
+function renderPetModal() {
+  const { level, intoLevel, neededForNext, pct } = xpProgress();
+  const stage = petStageForLevel(level);
+
+  document.getElementById("petModalArt").innerHTML = petSvg(stage.key, data.equippedAccessory, data.equippedBackground);
+
+  const nameInput = document.getElementById("petNameInput");
+  if (document.activeElement !== nameInput) {
+    nameInput.value = data.petName || "";
+  }
+
+  document.getElementById("petModalStageLevel").textContent = `${stage.name} · Level ${level}`;
+  document.getElementById("petModalXpBarFill").style.width = `${pct}%`;
+  document.getElementById("petModalXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
+  document.getElementById("petModalBirthdate").textContent = `Hatched ${formatPretty(data.petBirthdate || todayStr())}`;
+
+  renderPetUnlockGrid("accessory");
+  renderPetUnlockGrid("background");
+}
+
+function renderPetUnlockGrid(kind) {
+  const isAccessory = kind === "accessory";
+  const items = isAccessory ? ACCESSORIES : BACKGROUNDS;
+  const equippedKey = isAccessory ? data.equippedAccessory : data.equippedBackground;
+  const container = document.getElementById(isAccessory ? "petAccessoryGrid" : "petBackgroundGrid");
+  const { level } = xpProgress();
+  const stage = petStageForLevel(level);
+
+  container.innerHTML = "";
+  items.forEach((item) => {
+    const unlocked = isUnlocked(item, level);
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "pet-unlock-item";
+    if (!unlocked) tile.classList.add("locked");
+    if (equippedKey === item.key) tile.classList.add("equipped");
+
+    const previewArt = isAccessory
+      ? petSvg(stage.key, item.key, data.equippedBackground)
+      : petSvg(stage.key, data.equippedAccessory, item.key);
+
+    tile.innerHTML = `
+      <div class="pet-unlock-preview">${previewArt}</div>
+      <span class="pet-unlock-name">${item.name}</span>
+      <span class="pet-unlock-sub">${unlocked ? (equippedKey === item.key ? "Equipped" : "") : `Unlocks at level ${item.minLevel}`}</span>
+    `;
+    if (unlocked) {
+      tile.addEventListener("click", () => equipItem(kind, item.key));
+    } else {
+      tile.disabled = true;
+    }
+    container.appendChild(tile);
+  });
+}
+
+function equipItem(kind, key) {
+  const items = kind === "accessory" ? ACCESSORIES : BACKGROUNDS;
+  const item = items.find((i) => i.key === key);
+  const { level } = xpProgress();
+  if (!item || !isUnlocked(item, level)) return;
+
+  if (kind === "accessory") {
+    data.equippedAccessory = key;
+  } else {
+    data.equippedBackground = key;
+  }
+  saveData();
+  renderPet();
+  renderPetModal();
+}
+
+function savePetName() {
+  const input = document.getElementById("petNameInput");
+  const name = input.value.trim().slice(0, 24);
+  data.petName = name;
+  saveData();
 }
 
 function renderCleanDayButton() {
@@ -596,6 +782,21 @@ function wireEvents() {
     closeFanfareModal();
     openDayModal(todayStr());
   });
+
+  // Pet card / pet detail modal
+  document.getElementById("petCard").addEventListener("click", openPetModal);
+  document.getElementById("petCard").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openPetModal();
+    }
+  });
+  document.getElementById("petModalClose").addEventListener("click", closePetModal);
+  document.getElementById("petModal").addEventListener("click", (e) => {
+    if (e.target.id === "petModal") closePetModal();
+  });
+  document.getElementById("petNameInput").addEventListener("change", savePetName);
+  document.getElementById("petNameInput").addEventListener("blur", savePetName);
 
   document.getElementById("prevMonth").addEventListener("click", () => {
     calMonth--;
@@ -724,6 +925,10 @@ function importBackup(e) {
         xp: Number.isFinite(parsed.xp) ? parsed.xp : 0,
         confirmedDays: Array.isArray(parsed.confirmedDays) ? parsed.confirmedDays.slice().sort() : [],
         journalXpDates: Array.isArray(parsed.journalXpDates) ? parsed.journalXpDates.slice().sort() : [],
+        petName: typeof parsed.petName === "string" ? parsed.petName : "",
+        petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : base.petBirthdate,
+        equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
+        equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
       };
       saveData();
       closeSettingsModal();
