@@ -283,7 +283,7 @@ function renderHeader() {
 function renderHero() {
   const streak = currentStreakDays();
   document.getElementById("heroDays").textContent = streak;
-  document.getElementById("heroLabel").textContent = streak === 1 ? "day clear" : "days clear";
+  document.getElementById("heroLabel").textContent = streak === 1 ? "day clean" : "days clean";
   const start = currentStreakStart();
   document.getElementById("heroSince").textContent =
     streak > 0 || start <= todayStr()
@@ -530,7 +530,7 @@ function openDayModal(dateStr) {
   const modal = document.getElementById("dayModal");
   document.getElementById("dayModalDate").textContent = formatPretty(dateStr);
   const isSlip = data.relapses.includes(dateStr);
-  document.getElementById("dayModalStatus").textContent = isSlip ? "Marked as a slip" : "Clear day";
+  document.getElementById("dayModalStatus").textContent = isSlip ? "Marked as a slip" : "Clean day";
   document.getElementById("dayModalNote").value = data.notes[dateStr] || "";
   const toggleBtn = document.getElementById("dayModalToggleSlip");
   toggleBtn.textContent = isSlip ? "Remove slip mark" : "Mark this day as a slip";
