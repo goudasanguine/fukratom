@@ -10,7 +10,11 @@
   --bg: #f6f9f8;
   --card-bg: #ffffff;
   --border: #e2e8e6;
-  /* Fixed ink color for the pet's face-tattoo marks -- stays dark on the     pet's teal body in both light and dark mode, so it's not tied to --ink     (which flips to a light color in dark mode). */  --tattoo: #2c3a36;  --radius: 16px;
+  /* Fixed ink color for the pet's face-tattoo marks -- stays dark on the
+     pet's teal body in both light and dark mode, so it's not tied to --ink
+     (which flips to a light color in dark mode). */
+  --tattoo: #2c3a36;
+  --radius: 16px;
   --radius-sm: 10px;
   --shadow: 0 1px 3px rgba(16, 40, 36, 0.06), 0 8px 24px rgba(16, 40, 36, 0.05);
   /* Text color for anything sitting on a --teal-100-tinted background (quiet
@@ -345,6 +349,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
+  cursor: pointer;
+}
+.pet-card:hover, .pet-card:focus-visible {
+  background: var(--bg);
+}
+.pet-card:focus-visible {
+  outline: 2px solid var(--teal-500);
+  outline-offset: -2px;
+}
+
+.pet-card-chevron {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: var(--ink-soft);
 }
 
 .pet-art {
@@ -384,6 +402,100 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   background: linear-gradient(90deg, var(--amber-500), var(--teal-500));
   border-radius: 999px;
   transition: width 0.4s ease;
+}
+
+/* ---------- Pet detail modal ---------- */
+
+.pet-modal-art {
+  width: 140px;
+  height: 140px;
+  margin: 4px auto 8px;
+  animation: pet-bob 3.4s ease-in-out infinite;
+}
+.pet-modal-art .pet-svg { width: 100%; height: 100%; }
+
+.pet-modal-name-row {
+  text-align: center;
+}
+#petNameInput {
+  text-align: center;
+  font-weight: 700;
+  font-size: 18px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 2px;
+  margin-top: 0;
+}
+#petNameInput:focus {
+  outline: none;
+  border-bottom-color: var(--teal-500);
+}
+
+.pet-modal-stage-level {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 6px 0 10px;
+}
+
+.pet-modal-birthdate {
+  text-align: center;
+  margin-top: 6px;
+}
+
+.pet-modal-section-title {
+  margin: 22px 0 10px;
+  font-size: 15px;
+}
+
+.pet-unlock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.pet-unlock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.pet-unlock-item.equipped {
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 1px var(--teal-500) inset;
+}
+.pet-unlock-item.locked {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pet-unlock-preview {
+  width: 52px;
+  height: 52px;
+}
+.pet-unlock-preview .pet-svg { width: 100%; height: 100%; }
+
+.pet-unlock-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.pet-unlock-sub {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  text-align: center;
+  min-height: 12px;
 }
 
 /* Small star marker on calendar days Shawn actively confirmed (distinct from
