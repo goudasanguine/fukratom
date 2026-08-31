@@ -410,8 +410,8 @@ const ACCESSORIES = [
 // the thing, not by leveling.
 const BACKGROUNDS = [
   { key: "none", name: "None", unlock: atLevel(1) },
-  { key: "sunrise", name: "Sunrise", unlock: atLevel(1) },
-  { key: "cleanbeach", name: "Sunrise, Cleaned Up", unlock: atLevel(4) },
+  { key: "sunrise", name: "Beach (dirty)", unlock: atLevel(1) },
+  { key: "cleanbeach", name: "Beach (sunrise)", unlock: atLevel(4) },
   { key: "meadow", name: "Meadow", unlock: atLevel(5) },
   { key: "stars", name: "Starry Night", unlock: atLevel(7) },
   { key: "aurora", name: "Aurora", unlock: atLevel(10) },
@@ -802,11 +802,12 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
 // were already fixed across both themes (never redefined in styles.css), so
 // there's nothing to bake there.
 function backgroundSvg(key) {
-  // Sunrise / Sunrise, Cleaned Up -- a two-stage pair added 2026-08-31 (per
-  // Eric: "since this is intended to be the default option... we're going
-  // to make the beach get nicer looking over time"). "sunrise" (level 1,
-  // the default) is a beach that hasn't been cleaned up yet; "cleanbeach"
-  // (level 4) is the same scene tidied -- see the full explanation above
+  // Beach (dirty) / Beach (sunrise) -- a two-stage pair added 2026-08-31,
+  // renamed from "Sunrise"/"Sunrise, Cleaned Up" later the same day (per
+  // Eric). "sunrise" (level 1, the default) is a beach that hasn't been
+  // cleaned up yet; "cleanbeach" (level 4) is the same scene tidied -- see
+  // the full explanation, including the later cloudier-sky/dirtier-water/
+  // floating-trash-instead-of-a-boat re-detail pass, above
   // backgroundSvgTall()'s own cases below. This square version of each is
   // the same scene simplified/rescaled for the small sizes it's actually
   // shown at, not a different design.
@@ -815,18 +816,26 @@ function backgroundSvg(key) {
       <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#ffc9a8" opacity="0.55"/>
+      <path d="M0 4 Q60 -3 120 4 L120 24 L0 24 Z" fill="#c9c7bd" opacity="0.45"/>
+      <path d="M-4 12 Q6 7 16 12 Q24 8 31 12 Q24 15 16 14 Q6 15 -4 12 Z" fill="#d3d1c6" opacity="0.85"/>
+      <path d="M30 6 Q40 2 49 6 Q43 9 37 8 Q34 9 30 6 Z" fill="#d3d1c6" opacity="0.7"/>
+      <path d="M47 16 Q57 11 66 16 Q60 19 54 18 Q50 19 47 16 Z" fill="#c3c1b6" opacity="0.75"/>
       <circle cx="60" cy="64" r="22" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="64" r="15" fill="#ffb347" opacity="0.32"/>
       <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>
-      <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#bfe0df"/>
-      <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#a7d2d0" opacity="0.7"/>
-      <g transform="translate(9,67.5)" opacity="0.55" fill="#5c4433">
-        <path d="M-3 2 Q0 4 3 2 L2.5 1 L-2.5 1 Z"/>
-        <rect x="-0.25" y="-4.5" width="0.5" height="5.5"/>
-        <path d="M0 -4.5 L3.5 0.5 L0 0.5 Z"/>
+      <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#8b9169"/>
+      <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#6d7350" opacity="0.75"/>
+      <path d="M4 66 Q14 68 24 66.5 Q34 68.5 44 66 Q30 70 16 69 Q8 70 4 66 Z" fill="#4f5636" opacity="0.5"/>
+      <circle cx="70" cy="70" r="1.1" fill="#3c4028" opacity="0.6"/>
+      <circle cx="90" cy="75" r="0.9" fill="#3c4028" opacity="0.55"/>
+      <g transform="translate(9,67.5)" opacity="0.85">
+        <path d="M-4 2 Q-2 4.5 1 3.5 Q3.5 4.5 4.5 2 Q3 0.5 1 1.2 Q-1 0 -4 2 Z" fill="#6b6a5c"/>
+        <rect x="-1.5" y="-3.5" width="1.4" height="4" rx="0.3" fill="#8a8677" transform="rotate(-12)"/>
+        <rect x="1" y="-2.5" width="1" height="3" rx="0.3" fill="#4a4a42" transform="rotate(18)"/>
+        <path d="M-3 1.5 L-0.5 0.8" stroke="#33322c" stroke-width="0.4"/>
       </g>
-      <path d="M8 69 Q20 67 32 69 T56 69" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.5"/>
-      <path d="M64 74 Q76 72 88 74 T112 74" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.45"/>
+      <path d="M8 69 Q20 67 32 69 T56 69" stroke="#c9c48f" stroke-width="0.8" fill="none" opacity="0.4"/>
+      <path d="M64 74 Q76 72 88 74 T112 74" stroke="#c9c48f" stroke-width="0.8" fill="none" opacity="0.35"/>
       <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81 L120 120 L0 120 Z" fill="#ddd0a8"/>
       <g transform="translate(48,104) scale(0.5)">
         <path d="M-9 15 L-11 -13 Q0 -17 11 -13 L9 15 Q0 19 -9 15 Z" fill="#3a6b62"/>
@@ -1023,50 +1032,79 @@ function backgroundSvgTall(key) {
   // Both share the same underlying scene, described once here rather than
   // twice: layered warm sky (butter yellow up top fading through peach
   // into coral near the horizon -- same flat-shapes-stacked-with-opacity
-  // technique used everywhere else in this app, no real SVG gradients)
-  // with two soft clouds, a couple of distant birds, and a small sailboat
-  // silhouette on the water; a glowing three-ring sun sitting right on a
-  // narrow strip of distant water, drawn *before* that water so its own
-  // shape (z-order, same occlusion trick as Sakura Garden's
-  // mountain-behind-sun and Green Knoll's path-behind-Buddy) naturally
-  // covers the sun's lower half -- reads as the sun cresting the horizon
-  // rather than floating above it. A sandy foreground shore sits between
-  // the water and Buddy (added after an early draft had the water itself
-  // reach all the way down to where the pet stands -- reads as though
-  // Buddy is standing on open water, the same kind of "floating" problem
-  // the very first grounding round above fixed for the pet's own vertical
-  // position, just for this one background's content instead of CSS). The
-  // water strip is kept narrow and placed right around y128-162 -- the
-  // same y158-168ish band every other background's own ground plane sits
-  // in, since `.pet-stage-art`'s `bottom: 27%` anchor is shared across all
-  // backgrounds and isn't tuned per background (see the
-  // creature-grounded-on-horizon round above) -- so the *sand*, not the
-  // water, is what actually needs to sit there for Buddy's feet to land on
-  // solid ground. All colors fixed hex on purpose, same reasoning as every
-  // other background here -- this scene shouldn't shift with dark mode.
+  // technique used everywhere else in this app, no real SVG gradients);
+  // a glowing three-ring sun sitting right on a narrow strip of distant
+  // water, drawn *before* that water so its own shape (z-order, same
+  // occlusion trick as Sakura Garden's mountain-behind-sun and Green
+  // Knoll's path-behind-Buddy) naturally covers the sun's lower half --
+  // reads as the sun cresting the horizon rather than floating above it. A
+  // sandy foreground shore sits between the water and Buddy (added after
+  // an early draft had the water itself reach all the way down to where
+  // the pet stands -- reads as though Buddy is standing on open water, the
+  // same kind of "floating" problem the very first grounding round above
+  // fixed for the pet's own vertical position, just for this one
+  // background's content instead of CSS). The water strip is kept narrow
+  // and placed right around y128-162 -- the same y158-168ish band every
+  // other background's own ground plane sits in, since `.pet-stage-art`'s
+  // `bottom: 27%` anchor is shared across all backgrounds and isn't tuned
+  // per background (see the creature-grounded-on-horizon round above) --
+  // so the *sand*, not the water, is what actually needs to sit there for
+  // Buddy's feet to land on solid ground. All colors fixed hex on purpose,
+  // same reasoning as every other background here -- this scene shouldn't
+  // shift with dark mode.
+  //
+  // Renamed and re-detailed 2026-08-31, later the same day (per Eric): the
+  // picker now shows "Beach (dirty)" for this level-1 default (was
+  // "Sunrise") and "Beach (sunrise)" for the level-4 unlock (was "Sunrise,
+  // Cleaned Up") -- same two `key`s (`sunrise`/`cleanbeach`), just
+  // relabeled so the *name itself* signals which is the messy one. Per
+  // Eric ("make the dirty beach much cloudier and get rid of the flying
+  // birds, and make the water dirtier. Make the sailboat a floating pile
+  // of trash in the ocean instead of a sailboat"), "sunrise" now diverges
+  // from "cleanbeach" in four more ways beyond the shore litter above: a
+  // heavier, dingier gray-white cloud cover (both canvases -- the square
+  // one gained clouds for the first time, since it never had any) instead
+  // of the shared two-soft-clouds sky; the two small "distant birds" flying
+  // in the sky (a stroked squiggle-path group, tall canvas only -- the
+  // square canvas never had them) are gone entirely, though the two gulls
+  // *standing* on the sand stay, since those are litter-adjacent shore
+  // detail, not sky birds; the water itself shifted from clean teal/blue to
+  // a murky olive-brown with a faint oily sheen streak and a couple of dark
+  // debris flecks, and its ripple highlights dulled from white to a dingy
+  // khaki; and the sailboat silhouette that both stages used to share is
+  // now, for "sunrise" only, a small floating pile of trash (a scrap of
+  // planking, a dark plank, a pale plastic-scrap fleck) sitting at the same
+  // spot the boat's hull used to. "cleanbeach" keeps the original clear
+  // sky/clean water/sailboat scene from before this round untouched -- see
+  // its own case below.
   if (key === "sunrise") {
     return `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
       <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#ffc9a8" opacity="0.55"/>
-      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#ffffff" opacity="0.5"/>
-      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#ffffff" opacity="0.4"/>
-      <g stroke="var(--teal-900)" stroke-width="1.4" fill="none" opacity="0.4" stroke-linecap="round">
-        <path d="M30 50 q4 -5 8 0 q4 -5 8 0"/>
-        <path d="M80 70 q3 -4 6 0 q3 -4 6 0"/>
-      </g>
+      <path d="M0 6 Q60 -6 120 6 L120 46 L0 46 Z" fill="#c9c7bd" opacity="0.4"/>
+      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#d3d1c6" opacity="0.8"/>
+      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#c9c7bd" opacity="0.7"/>
+      <path d="M20 8 Q40 0 58 8 Q46 14 34 12 Q26 14 20 8 Z" fill="#d3d1c6" opacity="0.75"/>
+      <path d="M70 40 Q92 32 112 40 Q98 46 86 44 Q78 46 70 40 Z" fill="#c3c1b6" opacity="0.7"/>
+      <path d="M-4 52 Q16 45 34 52 Q22 58 10 56 Q2 58 -4 52 Z" fill="#c9c7bd" opacity="0.6"/>
       <circle cx="60" cy="128" r="44" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="128" r="30" fill="#ffb347" opacity="0.32"/>
       <circle cx="60" cy="128" r="19" fill="#ffa72b"/>
-      <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#bfe0df"/>
-      <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#a7d2d0" opacity="0.7"/>
-      <g transform="translate(18,135)" opacity="0.55" fill="#5c4433">
-        <path d="M-6 4 Q0 8 6 4 L5 2 L-5 2 Z"/>
-        <rect x="-0.5" y="-9" width="1" height="11"/>
-        <path d="M0 -9 L7 1 L0 1 Z"/>
+      <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#8b9169"/>
+      <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#6d7350" opacity="0.75"/>
+      <path d="M8 132 Q28 136 48 133 Q68 137 88 132 Q60 141 32 138 Q16 141 8 132 Z" fill="#4f5636" opacity="0.5"/>
+      <circle cx="100" cy="140" r="1.6" fill="#3c4028" opacity="0.6"/>
+      <circle cx="30" cy="150" r="1.3" fill="#3c4028" opacity="0.55"/>
+      <g transform="translate(18,135)" opacity="0.85">
+        <path d="M-8 4 Q-4 9 2 7 Q7 9 9 4 Q6 1 2 2.4 Q-2 0 -8 4 Z" fill="#6b6a5c"/>
+        <rect x="-3" y="-7" width="2.8" height="8" rx="0.6" fill="#8a8677" transform="rotate(-12)"/>
+        <rect x="2" y="-5" width="2" height="6" rx="0.6" fill="#4a4a42" transform="rotate(18)"/>
+        <path d="M-6 3 L-1 1.6" stroke="#33322c" stroke-width="0.8"/>
+        <ellipse cx="5" cy="2" rx="1.6" ry="1" fill="#cfcfc7" opacity="0.7"/>
       </g>
-      <path d="M14 138 Q34 134 54 138 T94 138" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.5"/>
-      <path d="M10 150 Q32 146 56 150 T104 150" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.45"/>
+      <path d="M14 138 Q34 134 54 138 T94 138" stroke="#c9c48f" stroke-width="1.1" fill="none" opacity="0.4"/>
+      <path d="M10 150 Q32 146 56 150 T104 150" stroke="#c9c48f" stroke-width="1.1" fill="none" opacity="0.35"/>
       <path d="M0 162 Q10 157 20 162 Q30 167 40 162 Q50 157 60 162 Q70 167 80 162 Q90 157 100 162 Q110 167 120 162 L120 240 L0 240 Z" fill="#ddd0a8"/>
       <g transform="translate(96,208)">
         <path d="M-9 15 L-11 -13 Q0 -17 11 -13 L9 15 Q0 19 -9 15 Z" fill="#3a6b62"/>
