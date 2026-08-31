@@ -94,14 +94,18 @@ function defaultData() {
     // reset, since the field didn't exist before this system shipped.
     xpResetApplied: true,
     // Pet customization: a nickname Shawn can optionally give it, plus which
-    // unlocked accessory/background are currently equipped ("none" = default).
+    // unlocked accessory/background are currently equipped ("none" = no
+    // accessory equipped; equippedBackground defaults to "sunrise", not
+    // "none", so a brand-new install starts on the trashed beach rather than
+    // the plain flat --bg -- see backgroundSvgTall()'s own sunrise/cleanbeach
+    // notes for why that's the level-1 default scene).
     petName: "",
     // The date the pet actually hatched out of its egg (reached level 3) --
     // null while it's still an egg. Set once, the moment it happens, by
     // awardXp() below. Not the date the save data was created.
     petBirthdate: null,
     equippedAccessory: "none",
-    equippedBackground: "none",
+    equippedBackground: "sunrise",
     // Cosmetics unlocked by DOING something once, rather than by level --
     // see the "unlock" descriptor on ACCESSORIES/BACKGROUNDS items below.
     // Each flips true forever the first time that action happens and never
@@ -150,7 +154,7 @@ function loadData() {
       petName: typeof parsed.petName === "string" ? parsed.petName : "",
       petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
       equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
-      equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
+      equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "sunrise",
       eventUnlocks: parseEventUnlocks(parsed.eventUnlocks),
     };
   } catch (e) {
@@ -406,7 +410,8 @@ const ACCESSORIES = [
 // the thing, not by leveling.
 const BACKGROUNDS = [
   { key: "none", name: "None", unlock: atLevel(1) },
-  { key: "sunrise", name: "Sunrise", unlock: atLevel(3) },
+  { key: "sunrise", name: "Sunrise", unlock: atLevel(1) },
+  { key: "cleanbeach", name: "Sunrise, Cleaned Up", unlock: atLevel(4) },
   { key: "meadow", name: "Meadow", unlock: atLevel(5) },
   { key: "stars", name: "Starry Night", unlock: atLevel(7) },
   { key: "aurora", name: "Aurora", unlock: atLevel(10) },
@@ -797,8 +802,87 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
 // were already fixed across both themes (never redefined in styles.css), so
 // there's nothing to bake there.
 function backgroundSvg(key) {
+  // Sunrise / Sunrise, Cleaned Up -- a two-stage pair added 2026-08-31 (per
+  // Eric: "since this is intended to be the default option... we're going
+  // to make the beach get nicer looking over time"). "sunrise" (level 1,
+  // the default) is a beach that hasn't been cleaned up yet; "cleanbeach"
+  // (level 4) is the same scene tidied -- see the full explanation above
+  // backgroundSvgTall()'s own cases below. This square version of each is
+  // the same scene simplified/rescaled for the small sizes it's actually
+  // shown at, not a different design.
   if (key === "sunrise") {
-    return `<circle cx="60" cy="58" r="50" fill="#fbecd3" opacity="0.7"/><path d="M4 96 Q60 76 116 96 L116 120 L4 120 Z" fill="#e3f4f1" opacity="0.8"/>`;
+    return `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#ffe9c7" opacity="0.6"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#ffd9ae" opacity="0.55"/>
+      <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#ffc9a8" opacity="0.55"/>
+      <circle cx="60" cy="64" r="22" fill="#ffb347" opacity="0.16"/>
+      <circle cx="60" cy="64" r="15" fill="#ffb347" opacity="0.32"/>
+      <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>
+      <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#bfe0df"/>
+      <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#a7d2d0" opacity="0.7"/>
+      <g transform="translate(9,67.5)" opacity="0.55" fill="#5c4433">
+        <path d="M-3 2 Q0 4 3 2 L2.5 1 L-2.5 1 Z"/>
+        <rect x="-0.25" y="-4.5" width="0.5" height="5.5"/>
+        <path d="M0 -4.5 L3.5 0.5 L0 0.5 Z"/>
+      </g>
+      <path d="M8 69 Q20 67 32 69 T56 69" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.5"/>
+      <path d="M64 74 Q76 72 88 74 T112 74" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.45"/>
+      <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81 L120 120 L0 120 Z" fill="#ddd0a8"/>
+      <g transform="translate(48,104) scale(0.5)">
+        <path d="M-9 15 L-11 -13 Q0 -17 11 -13 L9 15 Q0 19 -9 15 Z" fill="#3a6b62"/>
+        <ellipse cx="0" cy="-13" rx="11" ry="3" fill="#2c5450"/>
+      </g>
+      <g transform="translate(48,95) scale(0.5)" fill="#f2efe6" opacity="0.92">
+        <path d="M-11 4 Q-15 -6 -6 -10 Q4 -14 8 -6 Q12 1 6 5 Q-2 9 -6 8 Q-10 9 -11 4 Z"/>
+      </g>
+      <g transform="translate(38,109) scale(0.5)" fill="#33322f" opacity="0.88">
+        <path d="M-10 6 Q-13 -4 -4 -8 Q5 -11 10 -3 Q13 4 7 8 Q-2 12 -10 6 Z"/>
+      </g>
+      <g transform="translate(9,98) scale(0.5)" opacity="0.9">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#aaa89a" transform="rotate(15)"/>
+      </g>
+      <g transform="translate(35,115.5) scale(0.5)" stroke="#d8d08a" stroke-width="1.3" fill="none" opacity="0.85">
+        <circle cx="0" cy="0" r="4"/><circle cx="7" cy="0" r="4"/>
+      </g>
+      <g transform="translate(6,111) scale(0.5)">
+        <path d="M-6 -4 L5 -6 L8 3 L-2 7 L-8 1 Z" fill="#cfcfc7"/>
+      </g>
+      <g transform="translate(14,116.5) scale(0.5)">
+        <path d="M-7 0 Q-3 -7 4 -5 Q8 -2 6 3 Q0 7 -7 0 Z" fill="#c9a13a"/>
+      </g>
+      <g opacity="0.85" fill="#2a2620"><circle cx="17" cy="114" r="0.5"/><circle cx="19" cy="116" r="0.4"/></g>
+      <g transform="translate(3,103) scale(0.5) rotate(100)" opacity="0.88">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#a3a698"/>
+      </g>
+      <g transform="translate(9.5,115.5) scale(0.5) rotate(60)" opacity="0.9">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#b0aca0"/>
+      </g>
+      <g transform="translate(52,110) scale(0.5) rotate(-10)" opacity="0.85">
+        <path d="M-8 0 L-13 -3.5 L-13 3.5 Z" fill="#9fb0ac"/>
+        <path d="M-8 0 Q-8 -3 -2 -3 Q4 -3 8 0 Q4 3 -2 3 Q-8 3 -8 0 Z" fill="#9fb0ac"/>
+        <circle cx="-4" cy="-0.5" r="0.7" fill="#5c6b68"/>
+      </g>`;
+  }
+  if (key === "cleanbeach") {
+    return `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#ffe9c7" opacity="0.6"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#ffd9ae" opacity="0.55"/>
+      <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#ffc9a8" opacity="0.55"/>
+      <circle cx="60" cy="64" r="22" fill="#ffb347" opacity="0.16"/>
+      <circle cx="60" cy="64" r="15" fill="#ffb347" opacity="0.32"/>
+      <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>
+      <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#bfe0df"/>
+      <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#a7d2d0" opacity="0.7"/>
+      <g transform="translate(9,67.5)" opacity="0.55" fill="#5c4433">
+        <path d="M-3 2 Q0 4 3 2 L2.5 1 L-2.5 1 Z"/>
+        <rect x="-0.25" y="-4.5" width="0.5" height="5.5"/>
+        <path d="M0 -4.5 L3.5 0.5 L0 0.5 Z"/>
+      </g>
+      <path d="M8 69 Q20 67 32 69 T56 69" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.5"/>
+      <path d="M64 74 Q76 72 88 74 T112 74" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.45"/>
+      <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81 L120 120 L0 120 Z" fill="#f2e2c4"/>
+      <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81" fill="none" stroke="#ffffff" stroke-width="0.9" opacity="0.55"/>
+      <g opacity="0.5" fill="#c9a876"><circle cx="20" cy="98" r="1"/><circle cx="88" cy="102" r="1.1"/><circle cx="50" cy="110" r="0.9"/></g>`;
   }
   if (key === "meadow") {
     return `<path d="M0 96 Q30 84 60 96 T120 96 L120 120 L0 120 Z" fill="#e3f4f1"/><circle cx="20" cy="100" r="3" fill="var(--amber-500)"/><circle cx="100" cy="102" r="3" fill="var(--amber-500)"/><circle cx="36" cy="107" r="2.2" fill="var(--teal-700)"/><circle cx="88" cy="108" r="2.2" fill="var(--teal-700)"/>`;
@@ -906,11 +990,197 @@ function backgroundSvg(key) {
 // gap, whatever the composition on top of it; "none" is left to fall
 // through to the pet stage's own flat `--bg`, same as the square version.
 function backgroundSvgTall(key) {
+  // Sunrise / Sunrise, Cleaned Up -- reworked into a two-stage pair
+  // 2026-08-31 (per Eric, right after seeing the single spiced-up "sunrise
+  // over a beach" redesign below: "since this is intended to be the
+  // default option... we're going to make the beach get nicer looking over
+  // time"). The original spiced-up single-stage version (layered warm sky,
+  // a sun cresting a narrow strip of distant water, a sandy foreground
+  // shore, a sailboat, driftwood/shells) is now "cleanbeach" -- a level-4
+  // unlock, saved exactly as it stood right before this change (per Eric:
+  // "save a clean version of this as it is now, minus the pelican"). A
+  // pelican was tried standing on the sand in "sunrise" for a round (per
+  // Eric: "let's put the Pelican on the beach"), then dropped entirely
+  // 2026-08-31 per Eric ("ditch the pelican, it looks weird") once the
+  // litter itself got a detail pass -- an overflowing trash barrel with
+  // bulging bags inspired by a reference photo Eric sent. "sunrise" keeps
+  // the level-1 default slot but is now the *un*cleaned version of the
+  // same beach: same sky, sun, water, and boat (still the same place, same
+  // time of day -- only the shore has changed), but the shore itself is
+  // covered in litter instead of driftwood and shells -- an overflowing
+  // barrel with bulging trash bags and a stray black bag, a scattering of
+  // empty cans on the left side, a six-pack ring holder, a scrap of
+  // tinfoil, a plastic bottle, a couple of paper scraps, an old banana
+  // peel with a couple of flies over it, a small dead fish, and a couple
+  // of gulls. The idea: Shawn's own beach visibly tidies up as he levels,
+  // the same "getting better over time" arc as everything else in this
+  // app, just told through the *background* instead of the pet directly
+  // for once. All litter items are ordinary, non-drug-related beach trash
+  // on purpose -- this is a fun progression gag, not a pointed metaphor,
+  // so it stays generic (cans/wrappers/plastic), never anything that reads
+  // as referencing kratom or paraphernalia specifically.
+  //
+  // Both share the same underlying scene, described once here rather than
+  // twice: layered warm sky (butter yellow up top fading through peach
+  // into coral near the horizon -- same flat-shapes-stacked-with-opacity
+  // technique used everywhere else in this app, no real SVG gradients)
+  // with two soft clouds, a couple of distant birds, and a small sailboat
+  // silhouette on the water; a glowing three-ring sun sitting right on a
+  // narrow strip of distant water, drawn *before* that water so its own
+  // shape (z-order, same occlusion trick as Sakura Garden's
+  // mountain-behind-sun and Green Knoll's path-behind-Buddy) naturally
+  // covers the sun's lower half -- reads as the sun cresting the horizon
+  // rather than floating above it. A sandy foreground shore sits between
+  // the water and Buddy (added after an early draft had the water itself
+  // reach all the way down to where the pet stands -- reads as though
+  // Buddy is standing on open water, the same kind of "floating" problem
+  // the very first grounding round above fixed for the pet's own vertical
+  // position, just for this one background's content instead of CSS). The
+  // water strip is kept narrow and placed right around y128-162 -- the
+  // same y158-168ish band every other background's own ground plane sits
+  // in, since `.pet-stage-art`'s `bottom: 27%` anchor is shared across all
+  // backgrounds and isn't tuned per background (see the
+  // creature-grounded-on-horizon round above) -- so the *sand*, not the
+  // water, is what actually needs to sit there for Buddy's feet to land on
+  // solid ground. All colors fixed hex on purpose, same reasoning as every
+  // other background here -- this scene shouldn't shift with dark mode.
   if (key === "sunrise") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6ea"/>
-      <circle cx="60" cy="74" r="58" fill="#fbecd3" opacity="0.7"/>
-      <path d="M0 156 Q60 128 120 156 L120 240 L0 240 Z" fill="#e3f4f1" opacity="0.85"/>
-      <path d="M0 184 Q60 164 120 184 L120 240 L0 240 Z" fill="#e3f4f1" opacity="0.6"/>`;
+    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#ffe9c7" opacity="0.6"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#ffd9ae" opacity="0.55"/>
+      <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#ffc9a8" opacity="0.55"/>
+      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#ffffff" opacity="0.5"/>
+      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#ffffff" opacity="0.4"/>
+      <g stroke="var(--teal-900)" stroke-width="1.4" fill="none" opacity="0.4" stroke-linecap="round">
+        <path d="M30 50 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M80 70 q3 -4 6 0 q3 -4 6 0"/>
+      </g>
+      <circle cx="60" cy="128" r="44" fill="#ffb347" opacity="0.16"/>
+      <circle cx="60" cy="128" r="30" fill="#ffb347" opacity="0.32"/>
+      <circle cx="60" cy="128" r="19" fill="#ffa72b"/>
+      <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#bfe0df"/>
+      <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#a7d2d0" opacity="0.7"/>
+      <g transform="translate(18,135)" opacity="0.55" fill="#5c4433">
+        <path d="M-6 4 Q0 8 6 4 L5 2 L-5 2 Z"/>
+        <rect x="-0.5" y="-9" width="1" height="11"/>
+        <path d="M0 -9 L7 1 L0 1 Z"/>
+      </g>
+      <path d="M14 138 Q34 134 54 138 T94 138" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.5"/>
+      <path d="M10 150 Q32 146 56 150 T104 150" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.45"/>
+      <path d="M0 162 Q10 157 20 162 Q30 167 40 162 Q50 157 60 162 Q70 167 80 162 Q90 157 100 162 Q110 167 120 162 L120 240 L0 240 Z" fill="#ddd0a8"/>
+      <g transform="translate(96,208)">
+        <path d="M-9 15 L-11 -13 Q0 -17 11 -13 L9 15 Q0 19 -9 15 Z" fill="#3a6b62"/>
+        <ellipse cx="0" cy="-13" rx="11" ry="3" fill="#2c5450"/>
+        <path d="M-7 -5 L-5.5 11 M0 -7 L0 13 M7 -5 L5.5 11" stroke="#2c5450" stroke-width="0.7" opacity="0.5"/>
+      </g>
+      <g fill="#f2efe6" opacity="0.92">
+        <path d="M85 199 Q81 189 90 185 Q99 181 104 189 Q108 196 101 201 Q94 205 88 203 Q84 204 85 199 Z"/>
+        <path d="M91 187 Q93 184 96 186" stroke="#cfc9b8" stroke-width="0.8" fill="none"/>
+      </g>
+      <g fill="#eae6d8" opacity="0.9">
+        <path d="M100 192 Q97 184 105 182 Q112 180 114 187 Q116 193 110 195 Q104 197 100 192 Z"/>
+      </g>
+      <g fill="#e3ded0" opacity="0.85">
+        <path d="M92 178 Q90 172 96 170 Q102 169 103 174 Q104 179 98 180 Q93 181 92 178 Z"/>
+        <path d="M96 171 L98 167" stroke="#c9c2ae" stroke-width="1" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(76,222)" fill="#33322f" opacity="0.88">
+        <path d="M-10 6 Q-13 -4 -4 -8 Q5 -11 10 -3 Q13 4 7 8 Q-2 12 -10 6 Z"/>
+        <path d="M-1 -8 L2 -12" stroke="#1f1e1c" stroke-width="1" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(18,196) rotate(15)" opacity="0.9">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#aaa89a"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="1.1" fill="#8c8a7c"/>
+        <path d="M-3 3 L3 3" stroke="#8c8a7c" stroke-width="0.8"/>
+      </g>
+      <g transform="translate(70,231)" stroke="#d8d08a" stroke-width="1.1" fill="none" opacity="0.85">
+        <circle cx="0" cy="0" r="3.8"/><circle cx="6.5" cy="0" r="3.8"/><circle cx="3.2" cy="6" r="3.8"/>
+      </g>
+      <g transform="translate(65,219) rotate(-8)">
+        <path d="M-2 -9 L2 -9 L2 -6 L3.5 -4 L3.5 9 L-3.5 9 L-3.5 -4 L-2 -6 Z" fill="#cde3e8" opacity="0.65"/>
+        <rect x="-1.3" y="-11" width="2.6" height="2.5" fill="#9db8bb"/>
+      </g>
+      <g transform="translate(12,222)">
+        <path d="M-6 -4 L5 -6 L8 3 L-2 7 L-8 1 Z" fill="#cfcfc7"/>
+        <path d="M-4 -2 L4 1 M-1 3 L5 -3" stroke="#a9a99f" stroke-width="0.7"/>
+      </g>
+      <g transform="translate(28,233)">
+        <path d="M-7 0 Q-3 -7 4 -5 Q8 -2 6 3 Q0 7 -7 0 Z" fill="#c9a13a"/>
+        <path d="M-4 -1 Q0 -4 3 -2" stroke="#8a6a1e" stroke-width="0.8" fill="none"/>
+      </g>
+      <g opacity="0.85" fill="#2a2620">
+        <circle cx="34" cy="227" r="0.9"/><circle cx="38" cy="231" r="0.7"/><circle cx="31" cy="232" r="0.7"/>
+      </g>
+      <g transform="translate(24,176)"><path d="M-4 -2 L3 -3 L4 2 L-2 4 Z" fill="#e9e2ce" opacity="0.85"/></g>
+      <g transform="translate(108,182)"><path d="M-3 -2 L3 -1 L2 3 L-3 2 Z" fill="#dcd3ba" opacity="0.8"/></g>
+      <g transform="translate(50,236)" fill="#e6e5df" opacity="0.85">
+        <ellipse cx="0" cy="0" rx="4.5" ry="3.4"/>
+        <circle cx="4" cy="-2.8" r="2"/>
+        <path d="M5.6 -2.8 L9 -1.6 L5.8 -1 Z" fill="#c9820f" opacity="0.75"/>
+        <path d="M-1 3.2 L-1.6 6 M2.2 3.2 L2.8 6" stroke="#9a9a90" stroke-width="0.6"/>
+      </g>
+      <g transform="translate(114,234) scale(0.8)" fill="#e6e5df" opacity="0.8">
+        <ellipse cx="0" cy="0" rx="4.5" ry="3.4"/>
+        <circle cx="-4" cy="-2.8" r="2"/>
+        <path d="M-5.6 -2.8 L-9 -1.6 L-5.8 -1 Z" fill="#c9820f" opacity="0.75"/>
+        <path d="M-1 3.2 L-1.6 6 M2.2 3.2 L2.8 6" stroke="#9a9a90" stroke-width="0.6"/>
+      </g>
+      <g transform="translate(6,206) rotate(100)" opacity="0.88">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#a3a698"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="1.1" fill="#84876f"/>
+        <path d="M-3 3 L3 3" stroke="#84876f" stroke-width="0.8"/>
+      </g>
+      <g transform="translate(19,231) rotate(60)" opacity="0.9">
+        <rect x="-3" y="-11" width="6" height="20" rx="3" fill="#b0aca0"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="1.1" fill="#8c8676"/>
+        <path d="M-3 3 L3 3" stroke="#8c8676" stroke-width="0.8"/>
+        <path d="M0 -11 Q1.5 -12 2.6 -10.6" stroke="#6f6a58" stroke-width="0.6" fill="none"/>
+      </g>
+      <g transform="translate(104,220) rotate(-10)" opacity="0.85">
+        <path d="M-8 0 L-13 -3.5 L-13 3.5 Z" fill="#9fb0ac"/>
+        <path d="M-8 0 Q-8 -3 -2 -3 Q4 -3 8 0 Q4 3 -2 3 Q-8 3 -8 0 Z" fill="#9fb0ac"/>
+        <path d="M-2 -3 Q0 -5 3 -3.5" stroke="#7f8f8c" stroke-width="0.6" fill="none"/>
+        <circle cx="-4" cy="-0.5" r="0.7" fill="#5c6b68"/>
+        <path d="M3 -0.5 Q5.5 0 3 1.2" stroke="#7f8f8c" stroke-width="0.6" fill="none"/>
+      </g>`;
+  }
+  if (key === "cleanbeach") {
+    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#ffe9c7" opacity="0.6"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#ffd9ae" opacity="0.55"/>
+      <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#ffc9a8" opacity="0.55"/>
+      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#ffffff" opacity="0.5"/>
+      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#ffffff" opacity="0.4"/>
+      <g stroke="var(--teal-900)" stroke-width="1.4" fill="none" opacity="0.4" stroke-linecap="round">
+        <path d="M30 50 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M80 70 q3 -4 6 0 q3 -4 6 0"/>
+      </g>
+      <circle cx="60" cy="128" r="44" fill="#ffb347" opacity="0.16"/>
+      <circle cx="60" cy="128" r="30" fill="#ffb347" opacity="0.32"/>
+      <circle cx="60" cy="128" r="19" fill="#ffa72b"/>
+      <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#bfe0df"/>
+      <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#a7d2d0" opacity="0.7"/>
+      <g transform="translate(18,135)" opacity="0.55" fill="#5c4433">
+        <path d="M-6 4 Q0 8 6 4 L5 2 L-5 2 Z"/>
+        <rect x="-0.5" y="-9" width="1" height="11"/>
+        <path d="M0 -9 L7 1 L0 1 Z"/>
+      </g>
+      <path d="M14 138 Q34 134 54 138 T94 138" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.5"/>
+      <path d="M10 150 Q32 146 56 150 T104 150" stroke="#ffffff" stroke-width="1.1" fill="none" opacity="0.45"/>
+      <path d="M0 162 Q10 157 20 162 Q30 167 40 162 Q50 157 60 162 Q70 167 80 162 Q90 157 100 162 Q110 167 120 162 L120 240 L0 240 Z" fill="#f2e2c4"/>
+      <path d="M0 162 Q10 157 20 162 Q30 167 40 162 Q50 157 60 162 Q70 167 80 162 Q90 157 100 162 Q110 167 120 162" fill="none" stroke="#ffffff" stroke-width="1.3" opacity="0.55"/>
+      <g opacity="0.5" fill="#c9a876">
+        <circle cx="22" cy="196" r="1.4"/>
+        <circle cx="88" cy="204" r="1.6"/>
+        <circle cx="45" cy="220" r="1.3"/>
+        <circle cx="100" cy="180" r="1.2"/>
+        <circle cx="15" cy="215" r="1.5"/>
+      </g>
+      <path d="M84 188 Q92 184 100 188" stroke="#8a6a4a" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.6"/>
+      <g opacity="0.7" fill="#ffffff">
+        <path d="M25 178 Q30 172 35 178 Q30 182 25 178 Z"/>
+        <path d="M22 176 Q25 170 28 176 Z"/>
+      </g>`;
   }
   if (key === "meadow") {
     return `<rect x="0" y="0" width="120" height="240" fill="#f6f9f8"/>
@@ -1803,7 +2073,7 @@ function importBackup(e) {
         petName: typeof parsed.petName === "string" ? parsed.petName : "",
         petBirthdate: typeof parsed.petBirthdate === "string" ? parsed.petBirthdate : null,
         equippedAccessory: typeof parsed.equippedAccessory === "string" ? parsed.equippedAccessory : "none",
-        equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "none",
+        equippedBackground: typeof parsed.equippedBackground === "string" ? parsed.equippedBackground : "sunrise",
         eventUnlocks: parseEventUnlocks(parsed.eventUnlocks),
       };
       saveData();
