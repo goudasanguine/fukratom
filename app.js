@@ -809,45 +809,83 @@ function backgroundSvg(key) {
   if (key === "aurora") {
     return `<circle cx="60" cy="60" r="54" fill="#e3f4f1" opacity="0.5"/><path d="M6 48 Q60 18 114 48" stroke="var(--amber-500)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/><path d="M6 60 Q60 32 114 60" stroke="var(--teal-700)" stroke-width="3" fill="none" opacity="0.55" stroke-linecap="round"/>`;
   }
-  // Cozy neo-Tokyo zen garden: pale sky, a raked-sand ground plane, a torii
-  // silhouette off to one side, and a cherry tree shedding petals. Sakura
-  // pink is hardcoded (not a theme var) on purpose, same reasoning as
-  // clownnose's red -- blossoms shouldn't shift color with dark mode.
+  // Cozy neo-Tokyo zen garden, jazzed up 2026-08-31 (per Eric) -- see the
+  // full redesign notes above backgroundSvgTall()'s own sakuragarden case
+  // below; this square version is the same scene simplified/rescaled for
+  // the small sizes it's actually shown at, not a different design. Sakura
+  // pink and every other new color here is hardcoded (not a theme var) on
+  // purpose, same reasoning as clownnose's red -- this scene shouldn't
+  // shift color with dark mode.
   if (key === "sakuragarden") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#e3f4f1" opacity="0.35"/>
-      <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="#ffffff" opacity="0.55"/>
-      <path d="M8 98 Q60 92 112 98" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 105 Q60 99 112 105" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 112 Q60 106 112 112" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+    return `<rect x="0" y="0" width="120" height="120" fill="#f4eef6"/>
+      <path d="M0 25 Q60 16 120 25 L120 92 L0 92 Z" fill="#fbdfe6" opacity="0.5"/>
+      <path d="M0 46 Q60 38 120 46 L120 92 L0 92 Z" fill="#ffdcb0" opacity="0.35"/>
+      <circle cx="55" cy="25" r="14" fill="#ffe3c2" opacity="0.5"/>
+      <circle cx="55" cy="25" r="8" fill="#ffd39a" opacity="0.85"/>
+      <path d="M-6 20 Q6 15 16 20 Q26 15 34 20 Q24 23 15 22 Q6 23 -6 20 Z" fill="#ffffff" opacity="0.5"/>
       <g opacity="0.85">
         <rect x="12" y="30" width="3" height="34" fill="#a0453c"/>
         <rect x="27" y="30" width="3" height="34" fill="#a0453c"/>
         <rect x="9" y="30" width="24" height="4" fill="#a0453c"/>
         <rect x="7" y="22" width="28" height="4.5" rx="1" fill="#a0453c"/>
       </g>
-      <ellipse cx="94" cy="46" rx="4" ry="22" fill="#6b4a3a"/>
-      <circle cx="90" cy="26" r="13" fill="#f3c9d6"/>
-      <circle cx="101" cy="32" r="10" fill="#e88fae"/>
-      <circle cx="88" cy="37" r="9" fill="#e88fae"/>
+      <path d="M91 68 Q89 52 92 38 Q93 32 91 27 Q97 31 95 38 Q92 54 95 68 Z" fill="#6b4a3a"/>
+      <path d="M92 38 Q97 32 102 28" stroke="#6b4a3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <path d="M91 35 Q86 30 82 25" stroke="#6b4a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <circle cx="104" cy="28" r="8" fill="#f3c9d6"/>
+      <circle cx="111" cy="32" r="6" fill="#e88fae"/>
+      <circle cx="108" cy="37" r="5.5" fill="#e88fae"/>
+      <circle cx="94" cy="20" r="7" fill="#f3c9d6"/>
+      <circle cx="83" cy="26" r="6" fill="#eda3bd"/>
+      <circle cx="88" cy="32" r="7" fill="#eda3bd"/>
+      <g fill="#e0688f" opacity="0.7">
+        <circle cx="115" cy="27" r="1.3"/>
+        <circle cx="78" cy="30" r="1.3"/>
+        <circle cx="98" cy="14" r="1.2"/>
+      </g>
+      <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="#f2ead9"/>
+      <path d="M8 98 Q60 92 112 98" stroke="#e6dcc2" stroke-width="1.4" fill="none" opacity="0.75"/>
+      <path d="M55 106 Q80 96 105 106" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
+      <path d="M50 114 Q80 102 110 114" stroke="#d8c9a8" stroke-width="1.2" fill="none" opacity="0.7"/>
+      <g opacity="0.9">
+        <rect x="8" y="104" width="8" height="6" rx="1" fill="#847e6f"/>
+        <rect x="10" y="93" width="4" height="13" fill="#948e7e"/>
+        <path d="M6 93 L12 84 L18 93 Z" fill="#847e6f"/>
+      </g>
+      <g opacity="0.9">
+        <ellipse cx="82" cy="107" rx="9" ry="6" fill="#a8a297"/>
+        <ellipse cx="91" cy="103" rx="6" ry="4.5" fill="#b7b2a5"/>
+      </g>
+      <circle cx="79" cy="109" r="1.8" fill="var(--teal-700)" opacity="0.5"/>
       <g fill="#f3c9d6" opacity="0.9">
         <circle cx="40" cy="20" r="2"/>
         <circle cx="60" cy="14" r="1.6"/>
         <circle cx="72" cy="64" r="2"/>
         <circle cx="20" cy="52" r="1.6"/>
+        <circle cx="30" cy="98" r="1.5"/>
       </g>`;
   }
-  // Simple sunny knoll: sky wash, a sun, two rolling green rises, a winding
-  // path through them, and a small round tree off to the side.
+  // Sunny knoll, redrawn 2026-08-31 (per Eric, "a fresh go at the green
+  // knoll background idea") -- see the full redesign notes above
+  // backgroundSvgTall()'s own greenknoll case below; this square version is
+  // the same scene simplified/rescaled for the small sizes it's actually
+  // shown at (84px pet-card icon, 52px unlock-grid tile), not a different
+  // design.
   if (key === "greenknoll") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#fbecd3" opacity="0.3"/>
-      <circle cx="94" cy="20" r="12" fill="var(--amber-500)" opacity="0.55"/>
-      <path d="M0 84 Q30 68 60 82 T120 80 L120 120 L0 120 Z" fill="#e3f4f1"/>
-      <path d="M0 96 Q35 84 60 96 T120 94 L120 120 L0 120 Z" fill="var(--teal-500)" opacity="0.28"/>
-      <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#e9dcb0" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
-      <path d="M80 84 Q66 96 76 106 Q84 114 70 120" fill="none" stroke="#cdbb86" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
-      <ellipse cx="20" cy="86" rx="3.5" ry="16" fill="#6b4a3a"/>
-      <circle cx="16" cy="74" r="10" fill="var(--teal-700)" opacity="0.7"/>
-      <circle cx="26" cy="78" r="8" fill="var(--teal-700)" opacity="0.7"/>`;
+    return `<rect x="0" y="0" width="120" height="120" fill="#f3f7e6"/>
+      <circle cx="94" cy="20" r="13" fill="var(--amber-500)" opacity="0.18"/>
+      <circle cx="94" cy="20" r="8" fill="var(--amber-500)" opacity="0.6"/>
+      <g opacity="0.85" fill="#ffffff"><ellipse cx="26" cy="24" rx="9" ry="5.5"/><ellipse cx="34" cy="22" rx="6.5" ry="4.5"/></g>
+      <path d="M0 60 Q30 46 60 58 T120 55 L120 120 L0 120 Z" fill="#e4f3da"/>
+      <path d="M0 78 Q30 64 60 76 T120 73 L120 120 L0 120 Z" fill="#c3e6b0"/>
+      <path d="M0 96 Q30 84 60 94 T120 91 L120 120 L0 120 Z" fill="#78bd68"/>
+      <path d="M70 64 Q86 69 72 78 Q62 85 70 94 Q78 102 66 111 Q60 116 64 120" fill="none" stroke="#e9dcb0" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+      <path d="M70 64 Q86 69 72 78 Q62 85 70 94 Q78 102 66 111 Q60 116 64 120" fill="none" stroke="#cdbb86" stroke-width="0.9" stroke-linecap="round" opacity="0.5"/>
+      <rect x="17" y="68" width="4" height="24" rx="1.5" fill="#6b4a3a"/>
+      <circle cx="19" cy="60" r="12" fill="var(--teal-700)" opacity="0.55"/>
+      <circle cx="12" cy="66" r="9" fill="var(--teal-700)" opacity="0.6"/>
+      <circle cx="24" cy="65" r="8" fill="var(--teal-500)" opacity="0.65"/>
+      <g opacity="0.9"><circle cx="50" cy="92" r="1.8" fill="var(--amber-500)"/><circle cx="96" cy="98" r="1.8" fill="var(--amber-500)"/></g>`;
   }
   return ""; // none
 }
@@ -905,46 +943,212 @@ function backgroundSvgTall(key) {
       <path d="M6 80 Q60 54 114 80" stroke="var(--amber-500)" stroke-width="2.4" fill="none" opacity="0.4" stroke-linecap="round"/>
       <path d="M0 166 Q60 144 120 166 L120 240 L0 240 Z" fill="var(--teal-100)" opacity="0.5"/>`;
   }
+  // Cozy neo-Tokyo zen garden, jazzed up 2026-08-31 (per Eric, right after
+  // Green Knoll's own redesign landed: "so good that it makes the rest of
+  // the backgrounds pretty underwhelming... let's jazz up sakura garden,
+  // make the ground look more like a sandy zen garden, add a couple more
+  // Japanese decor options, make the sky beautiful"). The original version
+  // was functional but plain: a flat teal-tinted wash for sky, a flat white
+  // "ground" with a few thin straight rake lines, and just the torii +
+  // cherry tree. This redraw, addressing each of Eric's three asks in turn:
+  //   - **Sky**: layered translucent bands (blush pink over a peach/gold
+  //     band over the pale lavender base) fake a soft dawn-gradient sky
+  //     without real SVG gradients (still off-limits -- see the function
+  //     comment above backgroundSvg()), plus a glowing sun and two Japanese-
+  //     style wavy "kumo" cloud ribbons instead of Western fluffy clouds.
+  //     A distant Mt.-Fuji-style silhouette went through three rounds of
+  //     repositioning the same day (too close to the ground, then reading as
+  //     poking through the torii's legs, then hidden entirely behind the
+  //     tree canopy once moved to peek out from behind the sun) before Eric
+  //     called it: "just remove the damn mountain." It's gone -- sun and sky
+  //     alone carry the "beautiful sky" ask now. If a mountain ever comes
+  //     back, note for next time: this scene's usable gap that doesn't
+  //     collide with the torii, the tree, or Buddy himself is narrow (only
+  //     the sliver around x40-70), which is exactly what made it so fiddly.
+  //   - **Ground**: the flat white plane is now a warm sand tone with a
+  //     slightly deeper foreground band for depth, and the rake pattern is
+  //     no longer just straight parallel lines -- a few still run
+  //     side-to-side for texture, but most now curve in loose concentric
+  //     arcs around the new rock cluster (see below), the way a real
+  //     karesansui garden is actually raked around its stones.
+  //   - **Two more decor pieces**: a stone lantern (toro) on the left,
+  //     grounded on the sand beneath the torii, and a three-stone rock
+  //     cluster with a little moss on the right, grounded beneath the
+  //     cherry tree -- so each existing background element now has a
+  //     matching ground-level companion instead of the sand being empty
+  //     underneath them. Both sit clear of where Buddy actually stands
+  //     (centered, feet around y160-170 -- see the creature-grounded-on-
+  //     horizon round above), same principle as Green Knoll's tree/path
+  //     placement.
+  // All non-var colors are fixed hex, same reasoning as every other
+  // background here -- this scene shouldn't recolor with dark mode.
   if (key === "sakuragarden") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#e3f4f1" opacity="0.35"/>
-      <path d="M0 156 L120 156 L120 240 L0 240 Z" fill="#ffffff" opacity="0.55"/>
-      <path d="M8 162 Q60 156 112 162" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 171 Q60 165 112 171" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 180 Q60 174 112 180" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 190 Q60 184 112 190" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
-      <path d="M8 200 Q60 194 112 200" stroke="#e2e8e6" stroke-width="1.4" fill="none" opacity="0.8"/>
+    return `<rect x="0" y="0" width="120" height="240" fill="#f4eef6"/>
+      <path d="M0 50 Q60 32 120 50 L120 156 L0 156 Z" fill="#fbdfe6" opacity="0.5"/>
+      <path d="M0 92 Q60 76 120 92 L120 156 L0 156 Z" fill="#ffdcb0" opacity="0.35"/>
+      <circle cx="55" cy="50" r="28" fill="#ffe3c2" opacity="0.5"/>
+      <circle cx="55" cy="50" r="16" fill="#ffd39a" opacity="0.85"/>
+      <path d="M-10 40 Q10 30 30 40 Q50 30 68 40 Q50 46 30 44 Q10 46 -10 40 Z" fill="#ffffff" opacity="0.55"/>
+      <path d="M62 20 Q82 12 104 20 Q92 26 78 24 Q68 26 62 20 Z" fill="#ffffff" opacity="0.4"/>
+      <g fill="#f3c9d6" opacity="0.55">
+        <circle cx="20" cy="24" r="1.5"/>
+        <circle cx="42" cy="14" r="1.3"/>
+        <circle cx="100" cy="30" r="1.4"/>
+      </g>
       <g opacity="0.85">
         <rect x="12" y="57" width="3" height="34" fill="#a0453c"/>
         <rect x="27" y="57" width="3" height="34" fill="#a0453c"/>
         <rect x="9" y="57" width="24" height="4" fill="#a0453c"/>
         <rect x="7" y="49" width="28" height="4.5" rx="1" fill="#a0453c"/>
       </g>
-      <ellipse cx="94" cy="78" rx="4" ry="30" fill="#6b4a3a"/>
-      <circle cx="90" cy="48" r="15" fill="#f3c9d6"/>
-      <circle cx="103" cy="56" r="11" fill="#e88fae"/>
-      <circle cx="87" cy="62" r="10" fill="#e88fae"/>
+      <path d="M91 116 Q87 90 92 66 Q94 56 90 48 Q99 54 97 66 Q93 92 97 116 Z" fill="#6b4a3a"/>
+      <path d="M93 66 Q100 56 108 50" stroke="#6b4a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M92 62 Q84 54 78 46" stroke="#6b4a3a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M94 58 Q96 46 92 36" stroke="#6b4a3a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <circle cx="108" cy="48" r="13" fill="#f3c9d6"/>
+      <circle cx="118" cy="54" r="10" fill="#e88fae"/>
+      <circle cx="112" cy="62" r="9" fill="#e88fae"/>
+      <circle cx="96" cy="34" r="11" fill="#f3c9d6"/>
+      <circle cx="82" cy="42" r="10" fill="#eda3bd"/>
+      <circle cx="76" cy="52" r="8" fill="#e88fae"/>
+      <circle cx="90" cy="50" r="12" fill="#eda3bd"/>
+      <circle cx="100" cy="58" r="9" fill="#f3c9d6"/>
+      <g fill="#e0688f" opacity="0.7">
+        <circle cx="122" cy="48" r="2"/>
+        <circle cx="70" cy="46" r="2"/>
+        <circle cx="104" cy="26" r="1.8"/>
+        <circle cx="118" cy="68" r="1.8"/>
+        <circle cx="72" cy="58" r="1.8"/>
+      </g>
+      <path d="M0 156 L120 156 L120 240 L0 240 Z" fill="#f2ead9"/>
+      <path d="M0 208 L120 208 L120 240 L0 240 Z" fill="#ece0c8" opacity="0.55"/>
+      <path d="M8 164 Q60 157 112 164" stroke="#e6dcc2" stroke-width="1.3" fill="none" opacity="0.7"/>
+      <path d="M8 174 Q60 167 112 174" stroke="#e6dcc2" stroke-width="1.3" fill="none" opacity="0.7"/>
+      <path d="M60 183 Q95 168 130 183" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
+      <path d="M55 195 Q95 179 140 195" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
+      <path d="M50 207 Q95 189 145 207" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
+      <path d="M45 219 Q95 199 150 219" stroke="#d8c9a8" stroke-width="1.2" fill="none" opacity="0.7"/>
+      <path d="M8 231 Q60 224 112 231" stroke="#e6dcc2" stroke-width="1.3" fill="none" opacity="0.7"/>
+      <g opacity="0.92">
+        <rect x="14" y="208" width="12" height="8" rx="1.5" fill="#847e6f"/>
+        <rect x="17" y="178" width="6" height="30" fill="#948e7e"/>
+        <rect x="12" y="160" width="16" height="18" rx="2" fill="#948e7e"/>
+        <rect x="16" y="164" width="8" height="10" rx="1" fill="#5c574c" opacity="0.6"/>
+        <rect x="9" y="158" width="22" height="3" rx="1.5" fill="#847e6f"/>
+        <path d="M9 158 L20 146 L31 158 Z" fill="#847e6f"/>
+        <circle cx="20" cy="145" r="2" fill="#847e6f"/>
+      </g>
+      <circle cx="17" cy="212" r="3" fill="var(--teal-700)" opacity="0.5"/>
+      <circle cx="24" cy="214" r="2.2" fill="var(--teal-500)" opacity="0.5"/>
+      <g opacity="0.92">
+        <ellipse cx="92" cy="221" rx="16" ry="4" fill="#8a8578" opacity="0.3"/>
+        <ellipse cx="92" cy="214" rx="16" ry="11" fill="#a8a297"/>
+        <ellipse cx="104" cy="208" rx="11" ry="8" fill="#b7b2a5"/>
+        <ellipse cx="86" cy="222" rx="8" ry="6" fill="#c2bdae"/>
+      </g>
+      <circle cx="88" cy="220" r="3" fill="var(--teal-700)" opacity="0.5"/>
+      <circle cx="98" cy="224" r="2.3" fill="var(--teal-500)" opacity="0.5"/>
       <g fill="#f3c9d6" opacity="0.9">
         <circle cx="40" cy="37" r="2"/>
         <circle cx="60" cy="28" r="1.6"/>
         <circle cx="72" cy="92" r="2"/>
         <circle cx="20" cy="74" r="1.6"/>
         <circle cx="50" cy="146" r="1.8"/>
-        <circle cx="85" cy="167" r="1.5"/>
+        <circle cx="60" cy="170" r="1.5"/>
+        <circle cx="42" cy="196" r="1.6"/>
+        <circle cx="78" cy="230" r="1.7"/>
       </g>`;
   }
-  // Simple sunny knoll: sky wash, a sun, three rolling green rises, a
-  // winding path through them, and a small round tree off to the side.
+  // Sunny knoll, redrawn from scratch 2026-08-31 (per Eric: "a fresh go at
+  // the green knoll background idea" after the ground-line/tall-canvas
+  // rounds above). The original version was the least-developed of the six
+  // -- a flat amber sky wash, one small sun, two washed-out low-opacity hill
+  // overlays, and a two-circle tree -- built before any of the lessons from
+  // this session's other three rounds existed. This redraw applies all
+  // three on purpose:
+  //   1. Composed for the full 120x240 canvas from the start (four full-
+  //      width hill bands, each its own solid, distinct green, stacked back
+  //      to front) rather than the older approach of stretching a couple of
+  //      thin low-opacity bands and hoping they read as depth.
+  //   2. The pet's feet land around y155-170 on this canvas (see the
+  //      creature-grounded-on-horizon round above -- `bottom: 27%` plus each
+  //      stage's own foot padding). The third hill band's top edge sits at
+  //      y~158-168, specifically so the pet is standing ON a solid green
+  //      band's own color, not straddling a seam between two bands or still
+  //      up in a lighter/farther one.
+  //   3. Real depth and detail to match the other five (especially
+  //      sakuragarden's layered torii/tree/petals) instead of reading as the
+  //      simplest, least-finished option in the unlock grid: a soft sun with
+  //      its own glow, two drifting clouds, a longer winding path with a
+  //      visible pebble-tan color, a fuller multi-lobed tree (was two flat
+  //      circles, now four layered ones in two greens for real canopy
+  //      shape), a couple of simple birds, and scattered flower/clover dots
+  //      at the pet's own ground level so that band reads as grass underfoot
+  //      rather than an empty color field.
+  // All non-var colors are fixed hex on purpose (not --teal-100/--amber-100/
+  // --card-bg/--border), same reasoning as every other background here --
+  // this scene shouldn't recolor with dark mode. var(--amber-500)/
+  // var(--teal-700)/var(--teal-500)/var(--teal-900) are reused freely since
+  // those four are already fixed across both themes.
+  //
+  // Three more passes the same day, all per Eric after seeing the first
+  // redraw above:
+  //   - **The path used to just run straight up and stop** partway up the
+  //     first hill band, reading as a dead end rather than a path receding
+  //     into the distance. First attempt curled its top end into a small
+  //     hook/loop meant to read as cresting a rise and heading down the far
+  //     side -- Eric's call on that one: "looks odd." Simpler fix that
+  //     stuck: the path's top end is now tucked at (70, 128), squarely
+  //     behind where the creature layer renders on top of this backdrop
+  //     (`.pet-stage-art`, centered around x=60 and spanning down through
+  //     this same region -- see the full-screen redesign section above for
+  //     why background and creature are separate layers to begin with). No
+  //     hook needed -- the path simply runs up and disappears behind Buddy,
+  //     same as it visually disappears behind any of the foreground hills
+  //     lower down. If the path ever looks like it pokes out from behind the
+  //     creature again (e.g. if the creature's centering/sizing changes),
+  //     nudge this endpoint, not the hills.
+  //   - **The tree was rooted too far down** (trunk base at y210, well below
+  //     where the pet actually stands at ~y160-170), so it read as sitting
+  //     apart from/below the pet rather than next to it. Trunk and canopy are
+  //     both shifted up ~40px (trunk now y125-170, canopy circles centered
+  //     ~y100-120) so the tree's base lands at the same ground level the pet
+  //     is standing on.
   if (key === "greenknoll") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#fbecd3" opacity="0.3"/>
-      <circle cx="94" cy="36" r="14" fill="var(--amber-500)" opacity="0.55"/>
-      <path d="M0 144 Q30 122 60 142 T120 138 L120 240 L0 240 Z" fill="#e3f4f1"/>
-      <path d="M0 170 Q35 154 60 170 T120 167 L120 240 L0 240 Z" fill="var(--teal-500)" opacity="0.28"/>
-      <path d="M0 200 Q35 186 60 200 T120 197 L120 240 L0 240 Z" fill="var(--teal-700)" opacity="0.16"/>
-      <path d="M80 144 Q66 160 76 174 Q84 186 70 204 Q60 216 68 240" fill="none" stroke="#e9dcb0" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
-      <path d="M80 144 Q66 160 76 174 Q84 186 70 204 Q60 216 68 240" fill="none" stroke="#cdbb86" stroke-width="1" stroke-linecap="round" opacity="0.55"/>
-      <ellipse cx="20" cy="150" rx="3.5" ry="18" fill="#6b4a3a"/>
-      <circle cx="16" cy="136" r="11" fill="var(--teal-700)" opacity="0.7"/>
-      <circle cx="27" cy="141" r="9" fill="var(--teal-700)" opacity="0.7"/>`;
+    return `<rect x="0" y="0" width="120" height="240" fill="#f3f7e6"/>
+      <circle cx="94" cy="34" r="26" fill="var(--amber-500)" opacity="0.18"/>
+      <circle cx="94" cy="34" r="15" fill="var(--amber-500)" opacity="0.6"/>
+      <g opacity="0.85" fill="#ffffff">
+        <ellipse cx="26" cy="42" rx="12" ry="7"/>
+        <ellipse cx="36" cy="40" rx="9" ry="6"/>
+        <ellipse cx="18" cy="44" rx="8" ry="5.5"/>
+      </g>
+      <g opacity="0.65" fill="#ffffff">
+        <ellipse cx="62" cy="20" rx="9" ry="5"/>
+        <ellipse cx="70" cy="19" rx="6" ry="4"/>
+      </g>
+      <g stroke="var(--teal-900)" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round">
+        <path d="M44 26 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M60 44 q3 -4 6 0 q3 -4 6 0"/>
+      </g>
+      <path d="M0 92 Q30 72 60 90 T120 86 L120 240 L0 240 Z" fill="#e4f3da"/>
+      <path d="M0 132 Q30 112 60 130 T120 126 L120 240 L0 240 Z" fill="#c3e6b0"/>
+      <path d="M0 162 Q30 142 60 160 T120 156 L120 240 L0 240 Z" fill="#9ed488"/>
+      <path d="M0 200 Q30 182 60 198 T120 194 L120 240 L0 240 Z" fill="#78bd68"/>
+      <path d="M70 128 Q86 138 72 156 Q62 170 70 188 Q78 204 66 222 Q60 232 64 240" fill="none" stroke="#e9dcb0" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+      <path d="M70 128 Q86 138 72 156 Q62 170 70 188 Q78 204 66 222 Q60 232 64 240" fill="none" stroke="#cdbb86" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+      <rect x="17" y="125" width="5" height="45" rx="2" fill="#6b4a3a"/>
+      <circle cx="19" cy="110" r="20" fill="var(--teal-700)" opacity="0.55"/>
+      <circle cx="8" cy="120" r="15" fill="var(--teal-700)" opacity="0.6"/>
+      <circle cx="19" cy="100" r="16" fill="var(--teal-500)" opacity="0.7"/>
+      <circle cx="32" cy="118" r="14" fill="var(--teal-500)" opacity="0.65"/>
+      <g opacity="0.9">
+        <circle cx="45" cy="172" r="2.2" fill="var(--amber-500)"/>
+        <circle cx="95" cy="180" r="2" fill="var(--amber-500)"/>
+        <circle cx="55" cy="210" r="2.4" fill="var(--amber-500)"/>
+        <circle cx="30" cy="222" r="2" fill="var(--teal-900)" opacity="0.5"/>
+        <circle cx="100" cy="215" r="2.2" fill="var(--teal-900)" opacity="0.5"/>
+      </g>`;
   }
   return ""; // none -- lets the pet stage's own flat --bg show through
 }
