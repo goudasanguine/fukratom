@@ -448,22 +448,30 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   display: block;
 }
 
-/* The creature itself, centered and generously sized over the backdrop but
-   NOT stretched/cropped like the backdrop -- it's detailed character art
-   (face, accessories) that needs to stay undistorted and fully visible. */
+/* The creature itself, generously sized over the backdrop but NOT
+   stretched/cropped like the backdrop -- it's detailed character art (face,
+   accessories) that needs to stay undistorted and fully visible.
+   Anchored by its BOTTOM edge, not vertically centered (changed 2026-08-31,
+   per Eric: centering left it "floating in the air" over every background's
+   ground/horizon line instead of standing on it). Each stage's character art
+   already carries a little empty padding below its own feet inside its
+   120x120 viewBox (built that way from the start), so parking the box's
+   bottom edge a bit above the backgrounds' own ground line (they sit at
+   roughly 60-69% down the tall 120x240 art -- see backgroundSvgTall() in
+   app.js) lands the feet right on it. */
 .pet-stage-art {
   position: absolute;
   left: 50%;
-  top: 38%;
+  bottom: 27%;
   width: min(72vw, 340px);
   aspect-ratio: 1;
-  /* Centered via negative margins, not a translate(-50%,-50%) transform --
+  /* Horizontal centering via negative margin, not a translateX transform --
      the pet-bob keyframes below already animate `transform` (translateY),
      and a CSS animation replaces the whole transform value rather than
-     composing with a statically-declared one, which was silently wiping
-     out a transform-based centering offset here. */
+     composing with a statically-declared one, which would silently wipe out
+     a transform-based centering offset here. Vertical anchoring uses `bottom`
+     directly above, so it needs no such margin trick. */
   margin-left: calc(min(72vw, 340px) / -2);
-  margin-top: calc(min(72vw, 340px) / -2);
   animation: pet-bob 3.4s ease-in-out infinite;
 }
 .pet-stage-art .pet-svg {
