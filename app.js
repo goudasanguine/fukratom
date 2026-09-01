@@ -545,6 +545,7 @@ function init() {
   registerServiceWorker();
   initOneSignal();
   renderAll();
+  startTimeBandWatcher();
 }
 
 function renderAll() {
@@ -801,6 +802,69 @@ function petSvg(stageKey, accessoryKey, backgroundKey) {
 // var(--teal-700)/var(--teal-900) are left as-is on purpose: those three
 // were already fixed across both themes (never redefined in styles.css), so
 // there's nothing to bake there.
+// Real-world time-of-day background variants (added 2026-09-01, per Eric:
+// "every background should have a sunrise, midday, and nighttime variant
+// that changes depending on the irl time of day... it changes on its own
+// throughout the day"). Starting with the two beach backgrounds -- the
+// level-1 default ("sunrise" key, displayed as "Beach (dirty)") and its
+// level-4 clean unlock ("cleanbeach" key, "Beach (sunrise)") -- see their
+// cases in backgroundSvg()/backgroundSvgTall() below. The equipped
+// background *key* never changes -- still just "sunrise"/"cleanbeach" in
+// BACKGROUNDS, equippedBackground, and the unlock grid -- only which art
+// gets drawn for that key changes automatically based on the real clock, so
+// none of the equip/unlock/save logic needed touching. Bands: dawn 5am-10am,
+// day 10am-6pm, night 6pm-5am -- deliberately not tied to the actual local
+// sunrise/sunset time (which drifts with season/location and would need a
+// geolocation permission this app has no other reason to ask for), just a
+// simple fixed clock split that reads naturally most of the year.
+function getTimeBand() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 10) return "dawn";
+  if (h >= 10 && h < 18) return "day";
+  return "night";
+}
+
+// The night sky's moon shows the real current lunar phase (added 2026-09-01,
+// per Eric, right after seeing the first pass' moon: "fix the moon, it looks
+// like two moons at once. Can the moon reflect the fullness of the moon in
+// real life?"). The original attempt tried to "cut" a crescent out of a
+// solid circle by painting a same-color-as-the-sky path over part of it --
+// broke exactly as described, because the sky right there isn't one flat
+// color (it's several translucent cloud/gradient bands stacked on top of
+// each other -- see the sky blocks above), so the "invisible" cut-out patch
+// came out a visibly different shade than its surroundings and read as a
+// second circle rather than a bite taken out of the first. Fixed by
+// dropping the cut-a-hole approach entirely: getMoonPhase() computes the
+// real illuminated fraction from a synodic-month approximation (accurate to
+// about a day -- plenty for a decorative background element, and avoids
+// needing any location/timezone permission this app has no other reason to
+// ask for), and moonPhasePath() builds a self-contained lit-shape path for
+// it (the standard "outer limb arc + terminator-ellipse arc" construction).
+// That path is painted in a bright color on top of its own dim full-disc
+// circle, so the unlit portion of the moon still reads as "the rest of the
+// moon" rather than empty sky -- nothing needs to match or blend with
+// whatever's behind it, which is what actually guarantees it reads as one
+// moon regardless of the sky bands underneath.
+function getMoonPhase() {
+  const synodicMonth = 29.530588853;
+  const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14); // a known new moon (Jan 6 2000, 18:14 UTC)
+  const daysSince = (Date.now() - knownNewMoon) / 86400000;
+  let age = daysSince % synodicMonth;
+  if (age < 0) age += synodicMonth;
+  const cyclePos = age / synodicMonth; // 0..1, 0/1 = new moon, 0.5 = full moon
+  const k = (1 - Math.cos(cyclePos * 2 * Math.PI)) / 2; // illuminated fraction, 0..1
+  return { k, waxing: cyclePos < 0.5 };
+}
+
+function moonPhasePath(cx, cy, r, k, waxing) {
+  const kk = Math.max(0, Math.min(1, k));
+  const theta = kk * Math.PI;
+  const rx = Math.abs(r * Math.cos(theta));
+  const outerSweep = waxing ? 1 : 0;
+  const innerSweep = kk < 0.5 ? (waxing ? 0 : 1) : waxing ? 1 : 0;
+  return `M${cx} ${cy - r} A${r} ${r} 0 0 ${outerSweep} ${cx} ${cy + r} A${rx} ${r} 0 0 ${innerSweep} ${cx} ${cy - r} Z`;
+}
+
 function backgroundSvg(key) {
   // Beach (dirty) / Beach (sunrise) -- a two-stage pair added 2026-08-31,
   // renamed from "Sunrise"/"Sunrise, Cleaned Up" later the same day (per
@@ -811,8 +875,53 @@ function backgroundSvg(key) {
   // backgroundSvgTall()'s own cases below. This square version of each is
   // the same scene simplified/rescaled for the small sizes it's actually
   // shown at, not a different design.
+  //
+  // Each now has three time-of-day skies (added 2026-09-01, see
+  // getTimeBand() above) -- dawn/day/night -- picked automatically by the
+  // real clock. The water, litter (or driftwood/shells), and sand stay the
+  // same at every hour on purpose: pollution doesn't clean itself up
+  // overnight, and re-coloring a dozen small litter/decor groups three times
+  // over for a lighting change wasn't worth the risk of a transcription slip
+  // -- only the sky/sun-or-moon changes, plus a single translucent dark
+  // overlay + a thin moonlight glimmer for the night band, which dims
+  // everything below the skyline uniformly without touching any of it
+  // individually. "Dirty" keeps a slightly hazier, dingier sky than "clean"
+  // at every band, mirroring the dingy-vs-clear distinction the dawn skies
+  // already had before this round.
   if (key === "sunrise") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#141b26"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#1c2534" opacity="0.65"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#232e42" opacity="0.55"/>
+      <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#28304a" opacity="0.5"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="14" cy="10" r="0.6"/><circle cx="34" cy="6" r="0.5"/><circle cx="92" cy="8" r="0.5"/>
+        <circle cx="108" cy="18" r="0.6"/><circle cx="22" cy="26" r="0.4"/><circle cx="76" cy="24" r="0.5"/>
+      </g>
+      <path d="M-4 12 Q6 7 16 12 Q24 8 31 12 Q24 15 16 14 Q6 15 -4 12 Z" fill="#2a344a" opacity="0.6"/>
+      <path d="M47 16 Q57 11 66 16 Q60 19 54 18 Q50 19 47 16 Z" fill="#2a344a" opacity="0.55"/>
+      <path d="M-6 30 Q10 22 26 30 Q42 22 58 30 Q42 37 26 34 Q10 37 -6 30 Z" fill="#333f58" opacity="0.6"/>
+      <circle cx="62" cy="26" r="9" fill="#3a4258" opacity="0.55"/>
+      <path d="${moonPhasePath(62, 26, 9, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <path d="M46 21 Q56 13 68 21 Q78 13 88 21 Q78 28 68 25 Q56 28 46 21 Z" fill="#333f58" opacity="0.8"/>
+      <path d="M52 28 Q60 23 68 28 Q60 32 52 28 Z" fill="#2a344a" opacity="0.75"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#eef5f9"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#dfe9ee" opacity="0.6"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#d0dee5" opacity="0.55"/>
+      <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#c7d8e0" opacity="0.5"/>
+      <path d="M-4 12 Q6 7 16 12 Q24 8 31 12 Q24 15 16 14 Q6 15 -4 12 Z" fill="#c9c7bd" opacity="0.8"/>
+      <path d="M30 6 Q40 2 49 6 Q43 9 37 8 Q34 9 30 6 Z" fill="#d3d1c6" opacity="0.65"/>
+      <path d="M47 16 Q57 11 66 16 Q60 19 54 18 Q50 19 47 16 Z" fill="#c3c1b6" opacity="0.7"/>
+      <path d="M-6 30 Q10 22 26 30 Q42 22 58 30 Q42 37 26 34 Q10 37 -6 30 Z" fill="#d3d1c6" opacity="0.55"/>
+      <circle cx="86" cy="22" r="13" fill="#fff3c9" opacity="0.4"/>
+      <circle cx="86" cy="22" r="7" fill="#ffe27a"/>
+      <path d="M68 16 Q80 8 92 16 Q102 8 112 16 Q102 23 92 20 Q80 23 68 16 Z" fill="#cbd4d8" opacity="0.85"/>
+      <path d="M76 24 Q86 19 96 24 Q86 28 76 24 Z" fill="#bcc7cc" opacity="0.75"/>`
+        : `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
       <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#ffc9a8" opacity="0.55"/>
@@ -820,9 +929,18 @@ function backgroundSvg(key) {
       <path d="M-4 12 Q6 7 16 12 Q24 8 31 12 Q24 15 16 14 Q6 15 -4 12 Z" fill="#d3d1c6" opacity="0.85"/>
       <path d="M30 6 Q40 2 49 6 Q43 9 37 8 Q34 9 30 6 Z" fill="#d3d1c6" opacity="0.7"/>
       <path d="M47 16 Q57 11 66 16 Q60 19 54 18 Q50 19 47 16 Z" fill="#c3c1b6" opacity="0.75"/>
+      <path d="M-6 40 Q10 32 26 40 Q42 32 58 40 Q42 47 26 44 Q10 47 -6 40 Z" fill="#d3d1c6" opacity="0.6"/>
       <circle cx="60" cy="64" r="22" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="64" r="15" fill="#ffb347" opacity="0.32"/>
       <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>
+      <path d="M40 55 Q52 47 64 55 Q76 47 88 55 Q76 62 64 59 Q52 62 40 55 Z" fill="#e8d9b8" opacity="0.85"/>
+      <path d="M48 62 Q58 57 68 62 Q58 66 48 62 Z" fill="#dcc9a0" opacity="0.75"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="64" width="120" height="56" fill="#0c1220" opacity="0.5"/>
+      <path d="M58 66 L61 81" stroke="#c9d6d0" stroke-width="1.2" opacity="0.3"/>`
+        : "";
+    return sky + `
       <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#8b9169"/>
       <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#6d7350" opacity="0.75"/>
       <path d="M4 66 Q14 68 24 66.5 Q34 68.5 44 66 Q30 70 16 69 Q8 70 4 66 Z" fill="#4f5636" opacity="0.5"/>
@@ -870,16 +988,44 @@ function backgroundSvg(key) {
         <path d="M-8 0 L-13 -3.5 L-13 3.5 Z" fill="#9fb0ac"/>
         <path d="M-8 0 Q-8 -3 -2 -3 Q4 -3 8 0 Q4 3 -2 3 Q-8 3 -8 0 Z" fill="#9fb0ac"/>
         <circle cx="-4" cy="-0.5" r="0.7" fill="#5c6b68"/>
-      </g>`;
+      </g>` + nightDim;
   }
   if (key === "cleanbeach") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#0d1424"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#141c33" opacity="0.65"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#1b2540" opacity="0.55"/>
+      <g fill="#eef1e0" opacity="0.8">
+        <circle cx="16" cy="10" r="0.7"/><circle cx="36" cy="6" r="0.6"/><circle cx="60" cy="14" r="0.7"/>
+        <circle cx="94" cy="8" r="0.6"/><circle cx="110" cy="18" r="0.7"/><circle cx="24" cy="26" r="0.5"/>
+        <circle cx="78" cy="22" r="0.6"/><circle cx="46" cy="20" r="0.5"/>
+      </g>
+      <circle cx="60" cy="26" r="10" fill="#3f4a68" opacity="0.5"/>
+      <path d="${moonPhasePath(60, 26, 10, moon.k, moon.waxing)}" fill="#eef1e0"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#eaf6ff"/>
+      <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#d3edfa" opacity="0.6"/>
+      <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#c2e6f5" opacity="0.55"/>
+      <path d="M-6 16 Q8 9 20 16 Q32 9 42 16 Q30 21 20 19 Q8 21 -6 16 Z" fill="#ffffff" opacity="0.7"/>
+      <path d="M64 8 Q80 2 92 8 Q82 13 72 11 Q66 13 64 8 Z" fill="#ffffff" opacity="0.6"/>
+      <circle cx="86" cy="20" r="14" fill="#fff9e0" opacity="0.45"/>
+      <circle cx="86" cy="20" r="8" fill="#ffe680"/>`
+        : `<rect x="0" y="0" width="120" height="120" fill="#fdf6e3"/>
       <path d="M0 30 Q60 20 120 30 L120 120 L0 120 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 50 Q60 41 120 50 L120 120 L0 120 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 68 Q60 59 120 68 L120 120 L0 120 Z" fill="#ffc9a8" opacity="0.55"/>
       <circle cx="60" cy="64" r="22" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="64" r="15" fill="#ffb347" opacity="0.32"/>
-      <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>
+      <circle cx="60" cy="64" r="9.5" fill="#ffa72b"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="64" width="120" height="56" fill="#0c1220" opacity="0.45"/>
+      <path d="M58 66 L61 81" stroke="#dce8ec" stroke-width="1.2" opacity="0.35"/>`
+        : "";
+    return sky + `
       <path d="M0 64 L120 64 L120 81 L0 81 Z" fill="#bfe0df"/>
       <path d="M0 72.5 L120 72.5 L120 81 L0 81 Z" fill="#a7d2d0" opacity="0.7"/>
       <g transform="translate(9,67.5)" opacity="0.55" fill="#5c4433">
@@ -891,7 +1037,7 @@ function backgroundSvg(key) {
       <path d="M64 74 Q76 72 88 74 T112 74" stroke="#ffffff" stroke-width="0.8" fill="none" opacity="0.45"/>
       <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81 L120 120 L0 120 Z" fill="#f2e2c4"/>
       <path d="M0 81 Q5 78.5 10 81 Q15 83.5 20 81 Q25 78.5 30 81 Q35 83.5 40 81 Q45 78.5 50 81 Q55 83.5 60 81 Q65 78.5 70 81 Q75 83.5 80 81 Q85 78.5 90 81 Q95 83.5 100 81 Q105 78.5 110 81 Q115 83.5 120 81" fill="none" stroke="#ffffff" stroke-width="0.9" opacity="0.55"/>
-      <g opacity="0.5" fill="#c9a876"><circle cx="20" cy="98" r="1"/><circle cx="88" cy="102" r="1.1"/><circle cx="50" cy="110" r="0.9"/></g>`;
+      <g opacity="0.5" fill="#c9a876"><circle cx="20" cy="98" r="1"/><circle cx="88" cy="102" r="1.1"/><circle cx="50" cy="110" r="0.9"/></g>` + nightDim;
   }
   if (key === "meadow") {
     return `<path d="M0 96 Q30 84 60 96 T120 96 L120 120 L0 120 Z" fill="#e3f4f1"/><circle cx="20" cy="100" r="3" fill="var(--amber-500)"/><circle cx="100" cy="102" r="3" fill="var(--amber-500)"/><circle cx="36" cy="107" r="2.2" fill="var(--teal-700)"/><circle cx="88" cy="108" r="2.2" fill="var(--teal-700)"/>`;
@@ -1078,7 +1224,58 @@ function backgroundSvgTall(key) {
   // sky/clean water/sailboat scene from before this round untouched -- see
   // its own case below.
   if (key === "sunrise") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
+    // Time-of-day skies (added 2026-09-01, see getTimeBand() above the
+    // square backgroundSvg()) -- same dawn/day/night split, same "only the
+    // sky and a night-only dim overlay change, water/sand/litter stay put"
+    // approach, at this canvas's 120x240 coordinates instead of 120x120.
+    //
+    // Whole scene nudged up 20px (added 2026-09-01, same day, per Eric on
+    // his phone: "buddy is a little too high up, can we move the background
+    // up so that he isn't floating above the beach?"). NOT a change to
+    // `.pet-stage-art`'s shared `bottom: 27%` anchor in styles.css -- that's
+    // reused by every background (Meadow, Starry Night, Aurora, ...), and
+    // Eric only flagged the beach. Instead everything from the water down
+    // (water/shore/litter/driftwood-boat/nightDim) is wrapped in a
+    // `translate(0,-20)` group so the sand line rises to meet Buddy's feet;
+    // a plain untranslated sand-colored rect fills the 20px strip that
+    // shift vacates at the very bottom of the canvas (y220-240) so there's
+    // no gap. Applied to both keys' tall canvas only (backgroundSvgTall) --
+    // the square canvas (home pet-card icon) composites Buddy directly into
+    // its own art in petSvg() and was never affected by this.
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#141b26"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#1c2534" opacity="0.65"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#232e42" opacity="0.55"/>
+      <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#28304a" opacity="0.5"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="16" cy="14" r="0.9"/><circle cx="42" cy="8" r="0.7"/><circle cx="70" cy="20" r="0.9"/>
+        <circle cx="96" cy="10" r="0.7"/><circle cx="18" cy="40" r="0.6"/><circle cx="60" cy="34" r="0.7"/>
+        <circle cx="104" cy="30" r="0.6"/><circle cx="30" cy="54" r="0.5"/>
+      </g>
+      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#2a344a" opacity="0.65"/>
+      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#2a344a" opacity="0.6"/>
+      <path d="M-14 62 Q16 48 44 62 Q72 48 100 62 Q72 74 44 68 Q16 74 -14 62 Z" fill="#333f58" opacity="0.6"/>
+      <circle cx="66" cy="52" r="19" fill="#3a4258" opacity="0.55"/>
+      <path d="${moonPhasePath(66, 52, 19, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <path d="M40 42 Q58 26 78 42 Q96 26 114 42 Q96 54 78 48 Q58 54 40 42 Z" fill="#333f58" opacity="0.82"/>
+      <path d="M50 54 Q64 45 78 54 Q64 61 50 54 Z" fill="#2a344a" opacity="0.75"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#eef5f9"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#dfe9ee" opacity="0.6"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#d0dee5" opacity="0.55"/>
+      <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#c7d8e0" opacity="0.5"/>
+      <path d="M-10 34 Q10 25 28 34 Q46 25 62 34 Q46 40 28 38 Q10 40 -10 34 Z" fill="#c9c7bd" opacity="0.8"/>
+      <path d="M64 16 Q82 9 100 16 Q90 21 78 19 Q70 21 64 16 Z" fill="#d3d1c6" opacity="0.7"/>
+      <path d="M20 8 Q40 0 58 8 Q46 14 34 12 Q26 14 20 8 Z" fill="#c3c1b6" opacity="0.7"/>
+      <path d="M-14 60 Q16 46 44 60 Q72 46 100 60 Q72 72 44 66 Q16 72 -14 60 Z" fill="#d3d1c6" opacity="0.55"/>
+      <circle cx="92" cy="40" r="20" fill="#fff3c9" opacity="0.4"/>
+      <circle cx="92" cy="40" r="11" fill="#ffe27a"/>
+      <path d="M64 30 Q84 15 104 30 Q122 15 140 30 Q122 42 104 36 Q84 42 64 30 Z" fill="#cbd4d8" opacity="0.85"/>
+      <path d="M76 44 Q92 36 108 44 Q92 50 76 44 Z" fill="#bcc7cc" opacity="0.75"/>`
+        : `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
       <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#ffc9a8" opacity="0.55"/>
@@ -1088,9 +1285,19 @@ function backgroundSvgTall(key) {
       <path d="M20 8 Q40 0 58 8 Q46 14 34 12 Q26 14 20 8 Z" fill="#d3d1c6" opacity="0.75"/>
       <path d="M70 40 Q92 32 112 40 Q98 46 86 44 Q78 46 70 40 Z" fill="#c3c1b6" opacity="0.7"/>
       <path d="M-4 52 Q16 45 34 52 Q22 58 10 56 Q2 58 -4 52 Z" fill="#c9c7bd" opacity="0.6"/>
+      <path d="M-16 92 Q16 76 48 92 Q80 76 112 92 Q80 106 48 99 Q16 106 -16 92 Z" fill="#d3d1c6" opacity="0.6"/>
       <circle cx="60" cy="128" r="44" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="128" r="30" fill="#ffb347" opacity="0.32"/>
       <circle cx="60" cy="128" r="19" fill="#ffa72b"/>
+      <path d="M20 108 Q44 92 68 108 Q92 92 116 108 Q92 122 68 116 Q44 122 20 108 Z" fill="#e8d9b8" opacity="0.85"/>
+      <path d="M34 122 Q54 112 74 122 Q54 130 34 122 Z" fill="#dcc9a0" opacity="0.75"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="128" width="120" height="112" fill="#0c1220" opacity="0.5"/>
+      <path d="M64 130 L69 162" stroke="#c9d6d0" stroke-width="1.6" opacity="0.3"/>`
+        : "";
+    return sky + `
+      <g transform="translate(0,-20)">
       <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#8b9169"/>
       <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#6d7350" opacity="0.75"/>
       <path d="M8 132 Q28 136 48 133 Q68 137 88 132 Q60 141 32 138 Q16 141 8 132 Z" fill="#4f5636" opacity="0.5"/>
@@ -1180,10 +1387,43 @@ function backgroundSvgTall(key) {
         <path d="M-2 -3 Q0 -5 3 -3.5" stroke="#7f8f8c" stroke-width="0.6" fill="none"/>
         <circle cx="-4" cy="-0.5" r="0.7" fill="#5c6b68"/>
         <path d="M3 -0.5 Q5.5 0 3 1.2" stroke="#7f8f8c" stroke-width="0.6" fill="none"/>
-      </g>`;
+      </g>${nightDim}
+      </g>
+      <rect x="0" y="220" width="120" height="20" fill="#ddd0a8"/>`;
   }
   if (key === "cleanbeach") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
+    // Same time-of-day treatment as "sunrise" above. Night omits the flying
+    // birds (real gulls don't fly after dark); day keeps them, same squiggle
+    // group as dawn, since they're this background's own signature detail
+    // (see the beach-redetail round that removed them from "sunrise" but
+    // kept them here).
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#0d1424"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#141c33" opacity="0.65"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#1b2540" opacity="0.55"/>
+      <g fill="#eef1e0" opacity="0.8">
+        <circle cx="16" cy="14" r="0.9"/><circle cx="42" cy="8" r="0.8"/><circle cx="70" cy="20" r="0.9"/>
+        <circle cx="96" cy="10" r="0.8"/><circle cx="18" cy="40" r="0.7"/><circle cx="60" cy="34" r="0.8"/>
+        <circle cx="104" cy="30" r="0.7"/><circle cx="30" cy="54" r="0.6"/><circle cx="86" cy="52" r="0.6"/>
+      </g>
+      <circle cx="60" cy="50" r="21" fill="#3f4a68" opacity="0.5"/>
+      <path d="${moonPhasePath(60, 50, 21, moon.k, moon.waxing)}" fill="#eef1e0"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#eaf6ff"/>
+      <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#d3edfa" opacity="0.6"/>
+      <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#c2e6f5" opacity="0.55"/>
+      <path d="M-14 36 Q10 26 26 36 Q42 26 56 36 Q40 43 26 40 Q10 43 -14 36 Z" fill="#ffffff" opacity="0.7"/>
+      <path d="M66 14 Q86 6 102 14 Q90 20 78 18 Q70 20 66 14 Z" fill="#ffffff" opacity="0.6"/>
+      <g stroke="var(--teal-900)" stroke-width="1.4" fill="none" opacity="0.4" stroke-linecap="round">
+        <path d="M30 50 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M80 70 q3 -4 6 0 q3 -4 6 0"/>
+      </g>
+      <circle cx="92" cy="42" r="21" fill="#fff9e0" opacity="0.45"/>
+      <circle cx="92" cy="42" r="12" fill="#ffe680"/>`
+        : `<rect x="0" y="0" width="120" height="240" fill="#fdf6e3"/>
       <path d="M0 60 Q60 40 120 60 L120 240 L0 240 Z" fill="#ffe9c7" opacity="0.6"/>
       <path d="M0 100 Q60 82 120 100 L120 240 L0 240 Z" fill="#ffd9ae" opacity="0.55"/>
       <path d="M0 135 Q60 118 120 135 L120 240 L0 240 Z" fill="#ffc9a8" opacity="0.55"/>
@@ -1195,7 +1435,14 @@ function backgroundSvgTall(key) {
       </g>
       <circle cx="60" cy="128" r="44" fill="#ffb347" opacity="0.16"/>
       <circle cx="60" cy="128" r="30" fill="#ffb347" opacity="0.32"/>
-      <circle cx="60" cy="128" r="19" fill="#ffa72b"/>
+      <circle cx="60" cy="128" r="19" fill="#ffa72b"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="128" width="120" height="112" fill="#0c1220" opacity="0.45"/>
+      <path d="M64 130 L69 162" stroke="#dce8ec" stroke-width="1.6" opacity="0.35"/>`
+        : "";
+    return sky + `
+      <g transform="translate(0,-20)">
       <path d="M0 128 L120 128 L120 162 L0 162 Z" fill="#bfe0df"/>
       <path d="M0 145 L120 145 L120 162 L0 162 Z" fill="#a7d2d0" opacity="0.7"/>
       <g transform="translate(18,135)" opacity="0.55" fill="#5c4433">
@@ -1218,7 +1465,9 @@ function backgroundSvgTall(key) {
       <g opacity="0.7" fill="#ffffff">
         <path d="M25 178 Q30 172 35 178 Q30 182 25 178 Z"/>
         <path d="M22 176 Q25 170 28 176 Z"/>
-      </g>`;
+      </g>${nightDim}
+      </g>
+      <rect x="0" y="220" width="120" height="20" fill="#f2e2c4"/>`;
   }
   if (key === "meadow") {
     return `<rect x="0" y="0" width="120" height="240" fill="#f6f9f8"/>
@@ -1550,6 +1799,29 @@ function renderPet() {
   document.getElementById("petLevel").textContent = `Level ${level}`;
   document.getElementById("petXpBarFill").style.width = `${pct}%`;
   document.getElementById("petXpLabel").textContent = `${intoLevel} / ${neededForNext} XP to next level`;
+}
+
+// Keeps a time-of-day background (see getTimeBand() above backgroundSvg())
+// changing on its own while the app is left open across a dawn/day/night
+// boundary, rather than only picking up the new look on next load. Checks
+// every 5 minutes -- cheap, and the boundaries themselves are on-the-hour so
+// nothing needs finer resolution than that -- and only actually re-renders
+// when the band has genuinely changed, so this never fights with a picker or
+// modal the person has open for an unrelated reason. Re-renders whichever of
+// the two background surfaces (home pet card, full-screen pet stage) is
+// currently live; the unlock-grid preview tiles pick up the new look the
+// next time that grid is opened, same as any other background art.
+let lastTimeBand = null;
+function startTimeBandWatcher() {
+  lastTimeBand = getTimeBand();
+  setInterval(() => {
+    const band = getTimeBand();
+    if (band === lastTimeBand) return;
+    lastTimeBand = band;
+    renderPet();
+    const petModal = document.getElementById("petModal");
+    if (petModal && !petModal.classList.contains("hidden")) renderPetModal();
+  }, 5 * 60 * 1000);
 }
 
 /* ---------- pet full-screen stage + accessory/background picker ---------- */
