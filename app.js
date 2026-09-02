@@ -176,6 +176,17 @@ function enforceHatchDateInvariant() {
     data.petBirthdate = null;
     saveData();
   }
+  // Same self-healing idea, added 2026-09-02 once naming got gated to
+  // "after it hatches" (see renderPetModal()/openLevelUpModal()): an
+  // egg-stage pet should never have a name either, but a save from before
+  // that gate existed (Shawn's included -- still level 2 at the time) may
+  // already have one. Blank it out here so the very first hatch afterward
+  // is a real "give it a name" moment rather than a name it already quietly
+  // had.
+  if (level < 3 && data.petName) {
+    data.petName = "";
+    saveData();
+  }
 }
 
 // One-time-in-spirit backfill for anyone who pledged, marked a day clean, or
@@ -531,6 +542,17 @@ let calYear, calMonth; // 0-indexed month, currently displayed
 // queue drains, so that modal and this one never overlap either.
 let pendingUnlockAnnouncements = [];
 let openJournalAfterUnlocks = false;
+
+// Set by openFanfareModal() whenever the action that just fired leveled the
+// pet up, and consumed by closeFanfareModal() to show the big Level Up!
+// modal (see openLevelUpModal() below) right after the small XP fanfare
+// closes -- kept as its own queued step, same pattern as the unlock
+// announcements above, so it never stacks on top of another modal.
+// `hatched` marks the one special case: crossing from level 2 into level 3
+// is the moment the egg actually hatches (see PET_STAGES/petBirthdate),
+// which gets its own hatch animation and a naming prompt instead of the
+// plain level-up celebration.
+let pendingLevelUp = null;
 
 function init() {
   const t = strToDate(todayStr());
@@ -1056,12 +1078,57 @@ function backgroundSvg(key) {
   // purpose, same reasoning as clownnose's red -- this scene shouldn't
   // shift color with dark mode.
   if (key === "sakuragarden") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#f4eef6"/>
+    // Time-of-day sky (added 2026-09-02, per Eric: "all backgrounds should
+    // follow the same rule for adjusting the scene based on the irl time of
+    // day" -- same approach as the beach pair above: getTimeBand()/
+    // getMoonPhase() pick dawn/day/night automatically, only the sky wash +
+    // sun-or-moon + cloud silhouette change, and the torii/tree/blossoms/
+    // path/lantern/rocks/falling-petals stay exactly the same at every hour
+    // (same "scenery doesn't recolor itself" reasoning the beach's litter
+    // and this app's dark-mode-proof hex colors already use). Dawn/night
+    // palettes are the same two house palettes the beach uses (warm coral/
+    // gold for dawn, navy #141b26 family + real moon phase for night) so
+    // every background's time-of-day look feels like one consistent system
+    // rather than each background inventing its own. A single dark overlay
+    // rect dims the whole scene for night, same trick as the beach/
+    // greenknoll's own nightDim below -- simpler than re-tinting the torii's
+    // reds and the blossoms' pinks by hand, and it's how the beach handles
+    // its litter staying "lit" the same way at every hour too.
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#141b26"/>
+      <path d="M0 25 Q60 16 120 25 L120 92 L0 92 Z" fill="#1c2534" opacity="0.6"/>
+      <path d="M0 46 Q60 38 120 46 L120 92 L0 92 Z" fill="#232e42" opacity="0.5"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="18" cy="16" r="0.8"/><circle cx="38" cy="9" r="0.6"/><circle cx="100" cy="13" r="0.7"/>
+        <circle cx="112" cy="23" r="0.6"/><circle cx="14" cy="34" r="0.5"/>
+      </g>
+      <circle cx="55" cy="25" r="14" fill="#3a4258" opacity="0.5"/>
+      <path d="${moonPhasePath(55, 25, 8, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <path d="M-6 20 Q6 15 16 20 Q26 15 34 20 Q24 23 15 22 Q6 23 -6 20 Z" fill="#2a344a" opacity="0.55"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#f4eef6"/>
       <path d="M0 25 Q60 16 120 25 L120 92 L0 92 Z" fill="#fbdfe6" opacity="0.5"/>
       <path d="M0 46 Q60 38 120 46 L120 92 L0 92 Z" fill="#ffdcb0" opacity="0.35"/>
       <circle cx="55" cy="25" r="14" fill="#ffe3c2" opacity="0.5"/>
       <circle cx="55" cy="25" r="8" fill="#ffd39a" opacity="0.85"/>
-      <path d="M-6 20 Q6 15 16 20 Q26 15 34 20 Q24 23 15 22 Q6 23 -6 20 Z" fill="#ffffff" opacity="0.5"/>
+      <path d="M-6 20 Q6 15 16 20 Q26 15 34 20 Q24 23 15 22 Q6 23 -6 20 Z" fill="#ffffff" opacity="0.5"/>`
+        : `<rect x="0" y="0" width="120" height="120" fill="#fdf1e4"/>
+      <path d="M0 25 Q60 16 120 25 L120 92 L0 92 Z" fill="#ffd9b8" opacity="0.55"/>
+      <path d="M0 46 Q60 38 120 46 L120 92 L0 92 Z" fill="#ffc39c" opacity="0.5"/>
+      <path d="M0 66 Q60 58 120 66 L120 92 L0 92 Z" fill="#ffab5e" opacity="0.45"/>
+      <path d="M-6 20 Q6 15 16 20 Q26 15 34 20 Q24 23 15 22 Q6 23 -6 20 Z" fill="#fff1e0" opacity="0.5"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#0a0916" opacity="0.35"/>`
+        : "";
+    return sky + `
+      <g opacity="0.95">
+        <rect x="8" y="59.6" width="104" height="4.4" rx="2.2" fill="#7b7666"/>
+        <rect x="8" y="59.6" width="104" height="1.4" rx="0.7" fill="#a9a495"/>
+      </g>
       <g opacity="0.85">
         <rect x="12" y="30" width="3" height="34" fill="#a0453c"/>
         <rect x="27" y="30" width="3" height="34" fill="#a0453c"/>
@@ -1083,6 +1150,18 @@ function backgroundSvg(key) {
         <circle cx="98" cy="14" r="1.2"/>
       </g>
       <path d="M0 92 L120 92 L120 120 L0 120 Z" fill="#f2ead9"/>
+      <g opacity="0.95">
+        <rect x="43" y="86.4" width="26" height="5.6" fill="#948e7e"/>
+        <rect x="43" y="86.4" width="26" height="1.4" fill="#c2bdae"/>
+        <rect x="44.5" y="80.8" width="23" height="5.6" fill="#8f897a"/>
+        <rect x="44.5" y="80.8" width="23" height="1.4" fill="#bdb8a9"/>
+        <rect x="46" y="75.2" width="20" height="5.6" fill="#8a8474"/>
+        <rect x="46" y="75.2" width="20" height="1.4" fill="#b8b3a4"/>
+        <rect x="47.5" y="69.6" width="17" height="5.6" fill="#847e6f"/>
+        <rect x="47.5" y="69.6" width="17" height="1.4" fill="#b3ae9f"/>
+        <rect x="49" y="64" width="14" height="5.6" fill="#7f7a6a"/>
+        <rect x="49" y="64" width="14" height="1.4" fill="#aea99a"/>
+      </g>
       <path d="M8 98 Q60 92 112 98" stroke="#e6dcc2" stroke-width="1.4" fill="none" opacity="0.75"/>
       <path d="M55 106 Q80 96 105 106" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
       <path d="M50 114 Q80 102 110 114" stroke="#d8c9a8" stroke-width="1.2" fill="none" opacity="0.7"/>
@@ -1102,7 +1181,7 @@ function backgroundSvg(key) {
         <circle cx="72" cy="64" r="2"/>
         <circle cx="20" cy="52" r="1.6"/>
         <circle cx="30" cy="98" r="1.5"/>
-      </g>`;
+      </g>` + nightDim;
   }
   // Sunny knoll, redrawn 2026-08-31 (per Eric, "a fresh go at the green
   // knoll background idea") -- see the full redesign notes above
@@ -1111,10 +1190,39 @@ function backgroundSvg(key) {
   // shown at (84px pet-card icon, 52px unlock-grid tile), not a different
   // design.
   if (key === "greenknoll") {
-    return `<rect x="0" y="0" width="120" height="120" fill="#f3f7e6"/>
+    // Time-of-day sky (added 2026-09-02, per Eric: "all backgrounds should
+    // follow the same rule for adjusting the scene based on the irl time of
+    // day") -- same approach as sakuragarden just above and the beach pair:
+    // only the sky wash + sun-or-moon + cloud change, the hills/path/tree/
+    // flower dots stay exactly the same at every hour, and a single
+    // nightDim overlay covers the whole scene for the night band instead of
+    // hand-recoloring the tree's greens.
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#141b26"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="18" cy="14" r="0.8"/><circle cx="46" cy="8" r="0.6"/><circle cx="70" cy="16" r="0.7"/>
+        <circle cx="100" cy="10" r="0.7"/><circle cx="10" cy="30" r="0.6"/>
+      </g>
+      <circle cx="94" cy="20" r="13" fill="#3a4258" opacity="0.45"/>
+      <path d="${moonPhasePath(94, 20, 8, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <g opacity="0.5" fill="#2a344a"><ellipse cx="26" cy="24" rx="9" ry="5.5"/><ellipse cx="34" cy="22" rx="6.5" ry="4.5"/></g>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#f3f7e6"/>
       <circle cx="94" cy="20" r="13" fill="var(--amber-500)" opacity="0.18"/>
       <circle cx="94" cy="20" r="8" fill="var(--amber-500)" opacity="0.6"/>
-      <g opacity="0.85" fill="#ffffff"><ellipse cx="26" cy="24" rx="9" ry="5.5"/><ellipse cx="34" cy="22" rx="6.5" ry="4.5"/></g>
+      <g opacity="0.85" fill="#ffffff"><ellipse cx="26" cy="24" rx="9" ry="5.5"/><ellipse cx="34" cy="22" rx="6.5" ry="4.5"/></g>`
+        : `<rect x="0" y="0" width="120" height="120" fill="#fdf1e0"/>
+      <circle cx="94" cy="52" r="19" fill="#ffcf9e" opacity="0.45"/>
+      <circle cx="94" cy="52" r="11" fill="#ff9d47" opacity="0.9"/>
+      <g opacity="0.6" fill="#fff1e0"><ellipse cx="26" cy="24" rx="9" ry="5.5"/><ellipse cx="34" cy="22" rx="6.5" ry="4.5"/></g>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="120" fill="#0a0916" opacity="0.35"/>`
+        : "";
+    return sky + `
       <path d="M0 60 Q30 46 60 58 T120 55 L120 120 L0 120 Z" fill="#e4f3da"/>
       <path d="M0 78 Q30 64 60 76 T120 73 L120 120 L0 120 Z" fill="#c3e6b0"/>
       <path d="M0 96 Q30 84 60 94 T120 91 L120 120 L0 120 Z" fill="#78bd68"/>
@@ -1124,7 +1232,7 @@ function backgroundSvg(key) {
       <circle cx="19" cy="60" r="12" fill="var(--teal-700)" opacity="0.55"/>
       <circle cx="12" cy="66" r="9" fill="var(--teal-700)" opacity="0.6"/>
       <circle cx="24" cy="65" r="8" fill="var(--teal-500)" opacity="0.65"/>
-      <g opacity="0.9"><circle cx="50" cy="92" r="1.8" fill="var(--amber-500)"/><circle cx="96" cy="98" r="1.8" fill="var(--amber-500)"/></g>`;
+      <g opacity="0.9"><circle cx="50" cy="92" r="1.8" fill="var(--amber-500)"/><circle cx="96" cy="98" r="1.8" fill="var(--amber-500)"/></g>` + nightDim;
   }
   return ""; // none
 }
@@ -1540,13 +1648,50 @@ function backgroundSvgTall(key) {
   // All non-var colors are fixed hex, same reasoning as every other
   // background here -- this scene shouldn't recolor with dark mode.
   if (key === "sakuragarden") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#f4eef6"/>
+    // Time-of-day sky -- same rule/approach as the square version above and
+    // the beach pair (see the full explanation on backgroundSvg()'s own
+    // sakuragarden case). Only the sky wash + sun-or-moon + both clouds
+    // change; the sparkle dots, torii, tree, blossoms, path, lantern, and
+    // rocks below stay exactly the same at every hour, dimmed as one unit
+    // by nightDim for the night band.
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#141b26"/>
+      <path d="M0 50 Q60 32 120 50 L120 156 L0 156 Z" fill="#1c2534" opacity="0.6"/>
+      <path d="M0 92 Q60 76 120 92 L120 156 L0 156 Z" fill="#232e42" opacity="0.5"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="16" cy="30" r="1"/><circle cx="40" cy="16" r="0.8"/><circle cx="98" cy="24" r="0.9"/>
+        <circle cx="112" cy="42" r="0.7"/><circle cx="22" cy="60" r="0.7"/><circle cx="82" cy="12" r="0.7"/>
+      </g>
+      <circle cx="55" cy="50" r="28" fill="#3a4258" opacity="0.5"/>
+      <path d="${moonPhasePath(55, 50, 16, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <path d="M-10 40 Q10 30 30 40 Q50 30 68 40 Q50 46 30 44 Q10 46 -10 40 Z" fill="#2a344a" opacity="0.55"/>
+      <path d="M62 20 Q82 12 104 20 Q92 26 78 24 Q68 26 62 20 Z" fill="#2a344a" opacity="0.5"/>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#f4eef6"/>
       <path d="M0 50 Q60 32 120 50 L120 156 L0 156 Z" fill="#fbdfe6" opacity="0.5"/>
       <path d="M0 92 Q60 76 120 92 L120 156 L0 156 Z" fill="#ffdcb0" opacity="0.35"/>
       <circle cx="55" cy="50" r="28" fill="#ffe3c2" opacity="0.5"/>
       <circle cx="55" cy="50" r="16" fill="#ffd39a" opacity="0.85"/>
       <path d="M-10 40 Q10 30 30 40 Q50 30 68 40 Q50 46 30 44 Q10 46 -10 40 Z" fill="#ffffff" opacity="0.55"/>
-      <path d="M62 20 Q82 12 104 20 Q92 26 78 24 Q68 26 62 20 Z" fill="#ffffff" opacity="0.4"/>
+      <path d="M62 20 Q82 12 104 20 Q92 26 78 24 Q68 26 62 20 Z" fill="#ffffff" opacity="0.4"/>`
+        : `<rect x="0" y="0" width="120" height="240" fill="#fdf1e4"/>
+      <path d="M0 50 Q60 32 120 50 L120 156 L0 156 Z" fill="#ffd9b8" opacity="0.55"/>
+      <path d="M0 92 Q60 76 120 92 L120 156 L0 156 Z" fill="#ffc39c" opacity="0.5"/>
+      <path d="M0 122 Q60 110 120 122 L120 156 L0 156 Z" fill="#ffab5e" opacity="0.45"/>
+      <path d="M-10 40 Q10 30 30 40 Q50 30 68 40 Q50 46 30 44 Q10 46 -10 40 Z" fill="#fff1e0" opacity="0.5"/>
+      <path d="M62 20 Q82 12 104 20 Q92 26 78 24 Q68 26 62 20 Z" fill="#ffe6d2" opacity="0.45"/>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#0a0916" opacity="0.35"/>`
+        : "";
+    return sky + `
+      <g opacity="0.95">
+        <rect x="8" y="85.5" width="104" height="5.5" rx="2.7" fill="#766f5f"/>
+        <rect x="8" y="85.5" width="104" height="1.8" rx="0.9" fill="#a4a091"/>
+      </g>
       <g fill="#f3c9d6" opacity="0.55">
         <circle cx="20" cy="24" r="1.5"/>
         <circle cx="42" cy="14" r="1.3"/>
@@ -1579,6 +1724,20 @@ function backgroundSvgTall(key) {
       </g>
       <path d="M0 156 L120 156 L120 240 L0 240 Z" fill="#f2ead9"/>
       <path d="M0 208 L120 208 L120 240 L0 240 Z" fill="#ece0c8" opacity="0.55"/>
+      <g opacity="0.95">
+        <rect x="39" y="145.2" width="34" height="10.8" fill="#948e7e"/>
+        <rect x="39" y="145.2" width="34" height="2" fill="#c2bdae"/>
+        <rect x="41.2" y="134.3" width="29.6" height="10.9" fill="#8f897a"/>
+        <rect x="41.2" y="134.3" width="29.6" height="2" fill="#bdb8a9"/>
+        <rect x="43.4" y="123.5" width="25.2" height="10.8" fill="#8a8474"/>
+        <rect x="43.4" y="123.5" width="25.2" height="2" fill="#b8b3a4"/>
+        <rect x="45.6" y="112.7" width="20.8" height="10.8" fill="#857f70"/>
+        <rect x="45.6" y="112.7" width="20.8" height="2" fill="#b3ae9f"/>
+        <rect x="47.8" y="101.8" width="16.4" height="10.9" fill="#807a6b"/>
+        <rect x="47.8" y="101.8" width="16.4" height="2" fill="#aea99a"/>
+        <rect x="50" y="91" width="12" height="10.8" fill="#7b7666"/>
+        <rect x="50" y="91" width="12" height="2" fill="#a9a495"/>
+      </g>
       <path d="M8 164 Q60 157 112 164" stroke="#e6dcc2" stroke-width="1.3" fill="none" opacity="0.7"/>
       <path d="M8 174 Q60 167 112 174" stroke="#e6dcc2" stroke-width="1.3" fill="none" opacity="0.7"/>
       <path d="M60 183 Q95 168 130 183" stroke="#d8c9a8" stroke-width="1.3" fill="none" opacity="0.75"/>
@@ -1614,7 +1773,7 @@ function backgroundSvgTall(key) {
         <circle cx="60" cy="170" r="1.5"/>
         <circle cx="42" cy="196" r="1.6"/>
         <circle cx="78" cy="230" r="1.7"/>
-      </g>`;
+      </g>` + nightDim;
   }
   // Sunny knoll, redrawn from scratch 2026-08-31 (per Eric: "a fresh go at
   // the green knoll background idea" after the ground-line/tall-canvas
@@ -1672,7 +1831,35 @@ function backgroundSvgTall(key) {
   //     ~y100-120) so the tree's base lands at the same ground level the pet
   //     is standing on.
   if (key === "greenknoll") {
-    return `<rect x="0" y="0" width="120" height="240" fill="#f3f7e6"/>
+    // Time-of-day sky -- same rule/approach as every other case above (see
+    // the full explanation on backgroundSvg()'s own greenknoll case): only
+    // the sky wash + sun-or-moon + both cloud groups + the little bird
+    // squiggles change (birds tucked in for the night band, same reasoning
+    // the beach dropped its flying-bird squiggles for its dirty variant);
+    // the hills, path, tree, and flower/berry dots stay exactly the same at
+    // every hour, dimmed as one unit by nightDim for the night band.
+    const band = getTimeBand();
+    const moon = getMoonPhase();
+    const sky =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#141b26"/>
+      <g fill="#c9c9b0" opacity="0.5">
+        <circle cx="16" cy="24" r="1"/><circle cx="50" cy="12" r="0.8"/><circle cx="82" cy="30" r="0.9"/>
+        <circle cx="106" cy="16" r="0.8"/><circle cx="24" cy="52" r="0.7"/><circle cx="94" cy="56" r="0.7"/>
+      </g>
+      <circle cx="94" cy="34" r="26" fill="#3a4258" opacity="0.45"/>
+      <path d="${moonPhasePath(94, 34, 15, moon.k, moon.waxing)}" fill="#dcdcc4"/>
+      <g opacity="0.5" fill="#2a344a">
+        <ellipse cx="26" cy="42" rx="12" ry="7"/>
+        <ellipse cx="36" cy="40" rx="9" ry="6"/>
+        <ellipse cx="18" cy="44" rx="8" ry="5.5"/>
+      </g>
+      <g opacity="0.4" fill="#2a344a">
+        <ellipse cx="62" cy="20" rx="9" ry="5"/>
+        <ellipse cx="70" cy="19" rx="6" ry="4"/>
+      </g>`
+        : band === "day"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#f3f7e6"/>
       <circle cx="94" cy="34" r="26" fill="var(--amber-500)" opacity="0.18"/>
       <circle cx="94" cy="34" r="15" fill="var(--amber-500)" opacity="0.6"/>
       <g opacity="0.85" fill="#ffffff">
@@ -1687,7 +1874,28 @@ function backgroundSvgTall(key) {
       <g stroke="var(--teal-900)" stroke-width="1.3" fill="none" opacity="0.45" stroke-linecap="round">
         <path d="M44 26 q4 -5 8 0 q4 -5 8 0"/>
         <path d="M60 44 q3 -4 6 0 q3 -4 6 0"/>
+      </g>`
+        : `<rect x="0" y="0" width="120" height="240" fill="#fdf1e0"/>
+      <circle cx="94" cy="88" r="32" fill="#ffcf9e" opacity="0.45"/>
+      <circle cx="94" cy="88" r="19" fill="#ff9d47" opacity="0.9"/>
+      <g opacity="0.6" fill="#fff1e0">
+        <ellipse cx="26" cy="42" rx="12" ry="7"/>
+        <ellipse cx="36" cy="40" rx="9" ry="6"/>
+        <ellipse cx="18" cy="44" rx="8" ry="5.5"/>
       </g>
+      <g opacity="0.5" fill="#ffe6d2">
+        <ellipse cx="62" cy="20" rx="9" ry="5"/>
+        <ellipse cx="70" cy="19" rx="6" ry="4"/>
+      </g>
+      <g stroke="#e8935a" stroke-width="1.3" fill="none" opacity="0.5" stroke-linecap="round">
+        <path d="M44 26 q4 -5 8 0 q4 -5 8 0"/>
+        <path d="M60 44 q3 -4 6 0 q3 -4 6 0"/>
+      </g>`;
+    const nightDim =
+      band === "night"
+        ? `<rect x="0" y="0" width="120" height="240" fill="#0a0916" opacity="0.35"/>`
+        : "";
+    return sky + `
       <path d="M0 92 Q30 72 60 90 T120 86 L120 240 L0 240 Z" fill="#e4f3da"/>
       <path d="M0 132 Q30 112 60 130 T120 126 L120 240 L0 240 Z" fill="#c3e6b0"/>
       <path d="M0 162 Q30 142 60 160 T120 156 L120 240 L0 240 Z" fill="#9ed488"/>
@@ -1705,7 +1913,7 @@ function backgroundSvgTall(key) {
         <circle cx="55" cy="210" r="2.4" fill="var(--amber-500)"/>
         <circle cx="30" cy="222" r="2" fill="var(--teal-900)" opacity="0.5"/>
         <circle cx="100" cy="215" r="2.2" fill="var(--teal-900)" opacity="0.5"/>
-      </g>`;
+      </g>` + nightDim;
   }
   return ""; // none -- lets the pet stage's own flat --bg show through
 }
@@ -1852,7 +2060,17 @@ function renderPetModal() {
     `<svg viewBox="0 0 120 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${backgroundSvgTall(data.equippedBackground)}</svg>`;
   document.getElementById("petModalArt").innerHTML = petSvg(stage.key, data.equippedAccessory, "none");
 
+  // No name option until it's actually hatched (level 3+, see PET_STAGES/
+  // petBirthdate) -- added 2026-09-02 per Eric ("the pet should have no name
+  // option until it hatches, that's when the player is prompted to name
+  // it"). data.petBirthdate is the same "has it hatched yet" signal the
+  // hatch-date line below already uses. The naming prompt itself happens
+  // once, right at the hatch moment, in the Level Up! modal's hatch case
+  // (see openLevelUpModal()) -- this row just keeps the field hidden before
+  // that and available afterward for editing any time.
+  const nameRow = document.querySelector(".pet-stage-name-row");
   const nameInput = document.getElementById("petNameInput");
+  nameRow.classList.toggle("hidden", !data.petBirthdate);
   if (document.activeElement !== nameInput) {
     nameInput.value = data.petName || "";
   }
@@ -2015,7 +2233,7 @@ function handlePledge() {
   renderCleanDayButton();
   renderPet();
   queueUnlockAnnouncements(newlyUnlocked);
-  openFanfareModal(result, "pledge");
+  openFanfareModal(result, "pledge", beforeLevel);
 }
 
 function handleMarkCleanDay() {
@@ -2036,18 +2254,26 @@ function handleMarkCleanDay() {
   renderPet();
   renderCalendar();
   queueUnlockAnnouncements(newlyUnlocked);
-  openFanfareModal(result, "clean");
+  openFanfareModal(result, "clean", beforeLevel);
 }
 
 // kind is "pledge" (before 8pm), "clean" (after 8pm, the default), or
 // "journal" (a journal entry itself earned the XP) -- each gets its own
 // prompt/actions below since "want to write down how today went" only makes
-// sense for one of the three.
-function openFanfareModal(result, kind) {
+// sense for one of the three. beforeLevel is the level *before* this XP
+// award landed -- only used to queue the big Level Up! modal (see
+// pendingLevelUp above) and to tell whether this was the level-3 hatch
+// specifically, never for anything else here.
+function openFanfareModal(result, kind, beforeLevel) {
   document.getElementById("fanfareXpLine").textContent = `+${result.gained} XP for today`;
-  document.getElementById("fanfareLevelUp").classList.toggle("hidden", !result.leveledUp);
+  // The little inline "Level up!" pill this modal used to show on its own
+  // (added 2026-09-01) wasn't much fanfare for an actual level up, per Eric
+  // ("not much fanfare occurred, just the unlocked stuff notification") --
+  // retired 2026-09-02 in favor of the dedicated Level Up! modal queued
+  // below, which closeFanfareModal() opens right after this one closes.
+  document.getElementById("fanfareLevelUp").classList.add("hidden");
   if (result.leveledUp) {
-    document.getElementById("fanfareLevelUp").textContent = `Level up! ${result.newLevel}`;
+    pendingLevelUp = { newLevel: result.newLevel, hatched: beforeLevel < 3 && result.newLevel >= 3 };
   }
 
   const promptEl = document.getElementById("fanfarePrompt");
@@ -2077,8 +2303,107 @@ function openFanfareModal(result, kind) {
 
 function closeFanfareModal() {
   document.getElementById("fanfareModal").classList.add("hidden");
-  // Any unlock earned by the same action waits behind the fanfare modal,
-  // never on top of it -- surface it now that the fanfare modal is gone.
+  // A level up (see pendingLevelUp above) takes priority over plain unlock
+  // announcements -- it's the bigger moment, and closing IT is what drains
+  // the unlock queue next (see handleLevelUpGotIt below), same "wait behind
+  // whatever's already showing" rule the unlock queue itself follows.
+  if (pendingLevelUp) {
+    const info = pendingLevelUp;
+    pendingLevelUp = null;
+    openLevelUpModal(info);
+  } else {
+    showNextUnlockAnnouncement();
+  }
+}
+
+/* ---------- level-up modal ---------- */
+
+// Forces a CSS animation to restart even if the element already has this
+// class from a previous run -- toggling a class off then back on in the same
+// tick doesn't replay its animation without a layout flush in between.
+function retriggerAnim(el, className) {
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
+}
+
+// info is { newLevel, hatched } from pendingLevelUp above. The plain case
+// just shows the pet's current stage art, joyous, inside a pulsing glow. The
+// hatched special case (crossing into level 3) instead plays a short "the
+// egg is hatching" beat -- the egg shakes, then pops into the hatchling with
+// a small shard burst -- and only then reveals the level/naming prompt,
+// since per Eric the pet has no name option at all until this exact moment.
+function openLevelUpModal(info) {
+  const stage = petStageForLevel(info.newLevel);
+  const artEl = document.getElementById("levelUpArt");
+  const shardsEl = document.getElementById("levelUpShards");
+  const nameRow = document.getElementById("levelUpNameRow");
+  const titleEl = document.getElementById("levelUpTitle");
+  const sublineEl = document.getElementById("levelUpSubline");
+
+  shardsEl.innerHTML = "";
+  document.getElementById("levelUpLevelLine").textContent = `Level ${info.newLevel}`;
+  document.getElementById("levelUpModal").dataset.hatched = info.hatched ? "1" : "";
+
+  if (info.hatched) {
+    titleEl.textContent = "It's hatching...!";
+    sublineEl.textContent = "";
+    nameRow.classList.add("hidden");
+    artEl.innerHTML = petSvg("egg", "none", "none");
+    retriggerAnim(artEl, "hatch-shake");
+    document.getElementById("levelUpModal").classList.remove("hidden");
+    setTimeout(() => {
+      artEl.classList.remove("hatch-shake");
+      // No equipped background art here on purpose -- "buddy looking joyous
+      // in the center of a glowing hue" (per Eric) means the CSS glow above
+      // IS the backdrop; the pet's own scenery would just compete with it.
+      artEl.innerHTML = petSvg(stage.key, data.equippedAccessory, "none");
+      retriggerAnim(artEl, "pop-in");
+      spawnHatchShards(shardsEl);
+      titleEl.textContent = "Level Up!";
+      sublineEl.textContent = "It hatched! Give your buddy a name.";
+      nameRow.classList.remove("hidden");
+      const nameInput = document.getElementById("levelUpNameInput");
+      nameInput.value = data.petName || "";
+      nameInput.focus();
+    }, 1400);
+  } else {
+    titleEl.textContent = "Level Up!";
+    sublineEl.textContent = "";
+    nameRow.classList.add("hidden");
+    // Same "glow is the backdrop, not the equipped scenery" reasoning as
+    // the hatch case above.
+    artEl.innerHTML = petSvg(stage.key, data.equippedAccessory, "none");
+    retriggerAnim(artEl, "pop-in");
+    document.getElementById("levelUpModal").classList.remove("hidden");
+  }
+}
+
+// A ring of small triangular "eggshell" pieces that fly outward once, timed
+// to the hatchling reveal above -- purely decorative, removed again the next
+// time openLevelUpModal() runs (shardsEl.innerHTML = "" up top).
+function spawnHatchShards(container) {
+  const COUNT = 8;
+  for (let i = 0; i < COUNT; i++) {
+    const shard = document.createElement("span");
+    shard.style.setProperty("--rot", `${(360 / COUNT) * i}deg`);
+    shard.style.animationDelay = `${Math.random() * 0.08}s`;
+    container.appendChild(shard);
+  }
+}
+
+function handleLevelUpGotIt() {
+  document.getElementById("levelUpModal").classList.add("hidden");
+  // The name field only shows for the hatch special case (see
+  // openLevelUpModal) -- if it's visible, this "Got it" tap is also the
+  // naming prompt's submit, same as blurring the name field in the regular
+  // pet-stage modal does.
+  const nameRow = document.getElementById("levelUpNameRow");
+  if (!nameRow.classList.contains("hidden")) {
+    data.petName = document.getElementById("levelUpNameInput").value.trim().slice(0, 24);
+    saveData();
+  }
+  renderPet();
   showNextUnlockAnnouncement();
 }
 
@@ -2202,11 +2527,12 @@ function wireEvents() {
   });
   document.getElementById("fanfareNotNowBtn").addEventListener("click", closeFanfareModal);
   document.getElementById("fanfareJournalBtn").addEventListener("click", () => {
-    // If this same action also unlocked something, let the unlock modal(s)
-    // show first and open the journal entry once the queue drains -- see
-    // showNextUnlockAnnouncement(). Otherwise open it right away, same as
-    // before.
-    if (pendingUnlockAnnouncements.length > 0) {
+    // If this same action also leveled the pet up and/or unlocked
+    // something, let those modals show first and open the journal entry
+    // once they all drain -- see showNextUnlockAnnouncement() and
+    // closeFanfareModal()'s pendingLevelUp check above. Otherwise open it
+    // right away, same as before.
+    if (pendingUnlockAnnouncements.length > 0 || pendingLevelUp) {
       openJournalAfterUnlocks = true;
       closeFanfareModal();
     } else {
@@ -2219,6 +2545,15 @@ function wireEvents() {
   document.getElementById("unlockGotItBtn").addEventListener("click", handleUnlockGotIt);
   document.getElementById("unlockModal").addEventListener("click", (e) => {
     if (e.target.id === "unlockModal") handleUnlockGotIt();
+  });
+
+  // Level Up! modal
+  document.getElementById("levelUpGotItBtn").addEventListener("click", handleLevelUpGotIt);
+  document.getElementById("levelUpNameInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleLevelUpGotIt();
+    }
   });
 
   // Pet card / pet detail modal
@@ -2274,8 +2609,9 @@ function wireEvents() {
     // pay out again.
     let leveledResult = null;
     let newlyUnlocked = [];
+    let beforeLevel = null;
     if (note && !data.journalXpDates.includes(dateStr)) {
-      const beforeLevel = xpProgress().level;
+      beforeLevel = xpProgress().level;
       data.journalXpDates.push(dateStr);
       leveledResult = awardXp(XP_JOURNAL_ENTRY);
       newlyUnlocked = collectNewlyUnlockedLevelItems(beforeLevel, leveledResult.newLevel);
@@ -2291,7 +2627,7 @@ function wireEvents() {
     renderCalendar();
     renderPet();
     queueUnlockAnnouncements(newlyUnlocked);
-    if (leveledResult) openFanfareModal(leveledResult, "journal");
+    if (leveledResult) openFanfareModal(leveledResult, "journal", beforeLevel);
     else showNextUnlockAnnouncement();
   });
 
