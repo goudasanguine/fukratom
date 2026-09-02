@@ -690,3 +690,95 @@ hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
   animation: pet-bob 3.4s ease-in-out infinite;
 }
 .unlock-preview .pet-svg { width: 100%; height: 100%; }
+
+/* ---------- Level Up! modal ---------- */
+/* Added 2026-09-02, per Eric ("not much fanfare occurred, just the unlocked
+   stuff notification... we need a Level UP! pop up when the player levels
+   up, with the buddy looking joyous in the center of a glowing hue"). Reuses
+   .fanfare-modal's centered-card layout (see openLevelUpModal() in app.js
+   for when this shows and how the hatch special case differs). The glow's
+   color is a fixed warm gold hex, not a --amber-500/--teal-* theme token --
+   same reasoning as the pet/background art elsewhere in this file: a
+   celebratory glow shouldn't shift with dark mode. */
+
+.levelup-modal { position: relative; overflow: hidden; }
+
+.levelup-glow {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 196, 64, 0.55) 0%, rgba(255, 196, 64, 0.22) 45%, rgba(255, 196, 64, 0) 72%);
+  animation: levelup-glow-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes levelup-glow-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.85; }
+  50% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+}
+
+.levelup-art {
+  position: relative;
+  z-index: 1;
+  width: 140px;
+  height: 140px;
+  margin: 4px auto 6px;
+}
+.levelup-art .pet-svg { width: 100%; height: 100%; }
+.levelup-art.pop-in { animation: levelup-pop-in 0.6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes levelup-pop-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  60% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+/* The hatch special case's "about to hatch" beat, played on the egg art
+   before it's swapped for the hatchling and .pop-in takes over -- see
+   openLevelUpModal(). */
+.levelup-art.hatch-shake { animation: levelup-egg-shake 0.28s ease-in-out 5; }
+@keyframes levelup-egg-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-7deg); }
+  75% { transform: rotate(7deg); }
+}
+
+.levelup-title {
+  position: relative;
+  z-index: 1;
+  margin: 4px 0 2px;
+  font-size: 22px;
+  color: var(--amber-500);
+}
+.levelup-shards {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+/* One shard per <span>, added/cleared by spawnHatchShards() in app.js; --rot
+   (set inline per shard) fans them out evenly around the hatchling. */
+.levelup-shards span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px;
+  background: var(--amber-500);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  opacity: 0;
+  animation: levelup-shard-fly 0.65s ease-out forwards;
+}
+@keyframes levelup-shard-fly {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) translateY(-64px) scale(0.4); }
+}
+
+.levelup-name-row { position: relative; z-index: 1; margin-top: 10px; }
+.levelup-name-row input { width: 100%; text-align: center; font-size: 16px; }
