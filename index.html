@@ -185,6 +185,29 @@
   </div>
 </div>
 
+<!-- Level Up! modal (see openLevelUpModal() in app.js) -- shown right after
+     the small XP fanfare modal closes, whenever that action leveled the pet
+     up. The hatch special case (crossing into level 3) reuses this same
+     modal: it plays a short egg-shakes-then-pops animation before revealing
+     the usual level-up content, and additionally shows a one-time naming
+     prompt, since the pet has no name option at all before this moment. -->
+<div id="levelUpModal" class="modal-overlay hidden">
+  <div class="modal card fanfare-modal levelup-modal">
+    <div class="levelup-glow" aria-hidden="true"></div>
+    <div id="levelUpArt" class="levelup-art"></div>
+    <div id="levelUpShards" class="levelup-shards" aria-hidden="true"></div>
+    <h2 id="levelUpTitle" class="levelup-title">Level Up!</h2>
+    <p id="levelUpLevelLine" class="fanfare-xp">Level 4</p>
+    <p id="levelUpSubline" class="gentle-copy"></p>
+    <div id="levelUpNameRow" class="levelup-name-row hidden">
+      <input type="text" id="levelUpNameInput" maxlength="24" placeholder="Give it a name">
+    </div>
+    <div class="modal-actions">
+      <button id="levelUpGotItBtn" class="btn btn-primary" style="width:100%;">Nice!</button>
+    </div>
+  </div>
+</div>
+
 <!-- Pet full-screen stage: tapping the pet card on the main page opens this
      (redesigned 2026-08-31, per Eric: "the pet and background take up the
      whole screen"). The pet + its equipped background fill the screen;
